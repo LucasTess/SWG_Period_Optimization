@@ -45,7 +45,7 @@ os.makedirs(_simulation_spectra_directory, exist_ok=True)
 
 # --- Configuração do Algoritmo Genético ---
 
-population_size = 30
+population_size = 3
 mutation_rate = 0.2
 num_generations = 1
 
@@ -72,7 +72,7 @@ CONVERGENCE_PATIENCE = 20
 plot_best_spectrum = True
 
 # --- Ativar limpeza de debug ---
-debug_clean = False
+debug_clean = True
 
 print("--------------------------------------------------------------------------")
 print(f"Iniciando o script principal (main.py) para otimização do guia de onda...")
