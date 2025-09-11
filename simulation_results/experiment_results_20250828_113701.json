@@ -1,0 +1,39 @@
+{
+    "experiment_start_time": "2025-08-28T11:37:01.083739",
+    "last_update": "2025-08-28T11:38:58.354938",
+    "current_duration": "0:01:57.271199",
+    "generations_processed": 2,
+    "population_size": 3,
+    "mutation_rate": 0.2,
+    "max_generations_set": 2,
+    "best_individual_so_far": {
+        "Lambda": 1.571373117756018e-07,
+        "DC": 0.1,
+        "w": 3e-07,
+        "height": 1.8146306941901531e-07,
+        "fitness": 0.35165844197943935
+    },
+    "best_fitness_so_far": 0.35165844197943935,
+    "parameter_ranges": {
+        "Lambda": [
+            1e-07,
+            6e-07
+        ],
+        "DC": [
+            0.1,
+            0.9
+        ],
+        "w": [
+            3e-07,
+            7e-07
+        ],
+        "height": [
+            1.5e-07,
+            3e-07
+        ]
+    },
+    "fitness_history": [
+        0.35165844197943935,
+        0.35165844197943935
+    ]
+}

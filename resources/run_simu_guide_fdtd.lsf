@@ -1,0 +1,60 @@
+# run_simu_guide_fdtd.lsf (AJUSTADO)
+clc;
+
+##########################################################################################################
+# Define os parametros de simulacao para Matriz S de uma CELULA UNITARIA
+
+height = getnamed("Guia Metamaterial", "height");
+w = getnamed("Guia Metamaterial", "w");
+Lambda = getnamed("Guia Metamaterial", "Lambda");
+
+addfdtd;
+set("dimension", "3D");
+set("simulation time", 1000e-15);
+set("x", 0);
+set("x span", Lambda); 
+set("y", 0);
+set("y span", w*4);
+set("z", 0);
+set("z span", height*6);
+set("background material", 'Agua_deion');
+
+# Condições de Contorno de BLOCH em X
+set("x min bc", "Bloch");
+set("x max bc", "Bloch");
+set("y min bc", "PML");
+set("y max bc", "PML");
+set("z min bc", "PML");
+set("z max bc", "PML");
+
+set("mesh accuracy", 2);
+
+setglobalsource("wavelength start", 1.45e-6);
+setglobalsource("wavelength stop", 1.62e-6);
+
+# --- CONFIGURACAO DAS PORTAS ---
+
+# Porta de Entrada
+addport;
+set("name", "in");
+set("x", -Lambda/2);
+set("y", 0);
+set("y span", w*2.5);  # AJUSTADO: Span um pouco menor e mais focado
+set("z", 0);
+set("z span", height*3.5); # AJUSTADO: Span um pouco menor e mais focado
+set("direction", "Forward");
+
+# Porta de Saida
+addport;
+set("name", "through");
+set("x", Lambda/2);
+set("y", 0);
+set("y span", w*2.5);  # AJUSTADO
+set("z", 0);
+set("z span", height*3.5); # AJUSTADO
+set("direction", "Forward");
+
+setglobalmonitor("frequency points", 500);
+
+# Adiciona e nomeia o objeto de S-parameter sweep
+addsweep(3); 

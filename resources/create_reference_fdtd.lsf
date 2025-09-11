@@ -1,0 +1,21 @@
+# create_reference_fdtd.lsf (MODO "ESCRAVO")
+# Constrói a referência (guia contínuo)
+
+# 1. Lê os parâmetros do grupo existente
+height = getnamed("Guia Metamaterial", "height");
+w = getnamed("Guia Metamaterial", "w");
+Lambda = getnamed("Guia Metamaterial", "Lambda");
+material = getnamed("Guia Metamaterial", "material");
+
+# 2. Constrói a geometria de referência
+# Cria substrato e água (similar ao outro script)
+addrect; set("material", 'SiO2 (Glass) - Palik'); set("name","Substrato - SiO2"); set("x",0); set("x span", Lambda); set("y", 0); set("y span", w*4); set("z", -0.22e-6); set("z span", 0.22e-6);
+addrect; set("material", 'Agua_deion'); set("name","Agua"); set("x",0); set("x span", Lambda); set("y", 0); set("y span", w*4); set("z", 0); set("z span", height*6); set("alpha", 0.4);
+
+# Constrói o núcleo do guia contínuo
+addrect;
+set("name", "Reference_Waveguide_Core");
+set("material", material);
+set("x", 0); set("x span", Lambda);
+set("y", 0); set("y span", w);
+set("z", -0.11e-6 + height/2); set('z span', height);
