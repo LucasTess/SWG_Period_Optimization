@@ -1,4 +1,4 @@
-# experiment_end.py
+# experiment_end.py (Modificado para os novos parâmetros)
 
 import os
 import datetime
@@ -11,17 +11,15 @@ def record_experiment_results(
     optimizer_instance, 
     experiment_start_time,
 
-    Lambda_range, DC_range, w_range, height_range,
+    # --- MUDANÇA AQUI ---
+    Lambda_range, DC_range, w_range, w_c_range, N_range, # Remove height, adiciona w_c e N
 
     generations_processed
 ):
     """
     Registra os resultados atuais do experimento em arquivos JSON e PNG.
-    Os nomes dos arquivos são baseados no timestamp de início do experimento,
-    permitindo que sejam sobrescritos durante a execução para salvar o progresso.
     """
     # --- Gera o nome do arquivo baseado no INÍCIO do experimento ---
-    # Isso garante que o nome seja o mesmo durante toda a execução.
     timestamp_str = experiment_start_time.strftime('%Y%m%d_%H%M%S')
     results_path = os.path.join(output_directory, f"experiment_results_{timestamp_str}.json")
     plot_path = os.path.join(output_directory, f"fitness_history_{timestamp_str}.png")
@@ -32,7 +30,7 @@ def record_experiment_results(
 
     results_data = {
         "experiment_start_time": experiment_start_time.isoformat(),
-        "last_update": current_time.isoformat(), # Mostra quando foi a última atualização
+        "last_update": current_time.isoformat(),
         "current_duration": str(duration),
         "generations_processed": generations_processed,
         "population_size": optimizer_instance.population_size,
@@ -40,11 +38,14 @@ def record_experiment_results(
         "max_generations_set": optimizer_instance.generations,
         "best_individual_so_far": optimizer_instance.best_individual,
         "best_fitness_so_far": optimizer_instance.best_fitness,
+        
+        # --- MUDANÇA AQUI ---
         "parameter_ranges": {
             "Lambda": Lambda_range,
             "DC": DC_range,
             "w": w_range,
-            "height": height_range
+            "w_c": w_c_range,
+            "N": N_range
         },
         "fitness_history": optimizer_instance.fitness_history
     }

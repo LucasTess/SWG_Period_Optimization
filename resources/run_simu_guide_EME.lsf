@@ -1,0 +1,49 @@
+# run_simu_guide_EME.lsf (AJUSTADO)
+# Este script configura o EME, mas NÃO executa o sweep.
+
+# 1. Lê os parâmetros do grupo existente
+height = getnamed("Guia Metamaterial", "height");
+w = getnamed("Guia Metamaterial", "w");
+Lambda = getnamed("Guia Metamaterial", "Lambda");
+DC = getnamed("Guia Metamaterial", "DC");
+N = getnamed("Guia Metamaterial", "N"); # Número de períodos
+
+# 2. Configura o EME
+addeme;
+# set dimension
+set("x min",-2*Lambda);
+set("y",0);
+set("y span",w*1.5);
+set("z",0);
+set("z span",height*3);
+
+# set cell properties
+select("EME");
+set("display cells", 1);
+set("number of cell groups",4);
+set("group spans",[
+                   (2*Lambda)-Lambda/2; # Guia de entrada
+                   Lambda*DC;            # Segmento 1 (largo)
+                   Lambda*(1-DC);        # Segmento 2 (estreito)
+                   2*Lambda-Lambda/2     # Guia de saída
+                   ]);                  
+set("cells",[
+             1;
+             1;
+             1;
+             1
+             ]);
+set("subcell method",[ 0; 0; 0; 0]);   # 0 = none,  1 = CVCS
+
+# Define a seção periódica
+set("number of periodic groups", 1);
+set("start cell group", [2]);
+set("end cell group",[3]);
+set("periods", N);
+ 
+# Propaga os modos nas células
+# O comando 'run' aqui é necessário para calcular os modos de cada célula,
+# preparando o solver para o sweep que o Python irá executar.
+run;
+
+# O Python irá configurar o 'wavelength sweep' e executar 'emesweep'

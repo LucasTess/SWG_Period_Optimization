@@ -1,4 +1,4 @@
-# analysis.py (Modificado para salvar figuras em vez de exibir)
+# analysis.py (Modificado para os novos parâmetros)
 
 import pandas as pd
 import seaborn as sns
@@ -16,8 +16,10 @@ def run_full_analysis(csv_file_path):
         df = pd.read_csv(csv_file_path)
         print("Dados carregados com sucesso!")
         print(f"Total de indivíduos analisados: {len(df)}")
-        df = df[df['S11'] > -1e30]
-        params_and_fitness = ['Lambda', 'DC', 'w', 'height', 'Fitness']
+        
+        # --- MUDANÇA AQUI ---
+        # Atualiza a lista de parâmetros para a análise
+        params_and_fitness = ['Lambda', 'DC', 'w', 'w_c', 'N', 'Fitness']
         df_analysis = df[params_and_fitness]
 
         # Define os caminhos de saída baseados no nome do arquivo de entrada
@@ -41,7 +43,6 @@ def run_full_analysis(csv_file_path):
         )
         plt.title('Matriz de Correlação entre Parâmetros e Fitness')
         
-        # MODIFICADO: Salva a figura e fecha para liberar memória
         plt.savefig(heatmap_output_path)
         plt.close()
         print(f"-> Heatmap salvo em: {heatmap_output_path}")
@@ -54,23 +55,22 @@ def run_full_analysis(csv_file_path):
             diag_kind='kde' # Mostra uma curva de densidade na diagonal
         )
         
-
         pair_plot.figure.suptitle('Análise Visual de Pares entre Parâmetros e Fitness', y=1.02)
-
         
-        # MODIFICADO: Salva a figura e fecha para liberar memória
         pair_plot.savefig(pairplot_output_path)
         plt.close()
         print(f"-> Pairplot salvo em: {pairplot_output_path}")
 
     except FileNotFoundError:
         print(f"Erro: O arquivo '{csv_file_path}' não foi encontrado.")
+    except KeyError as e:
+        print(f"Erro: A coluna {e} não foi encontrada no CSV. Verifique 'params_and_fitness'.")
     except Exception as e:
         print(f"Ocorreu um erro durante a análise: {e}")
 
 
 if __name__ == '__main__':
     # ATUALIZE AQUI com o caminho para o seu arquivo CSV que deseja analisar
-    file_to_analyze = "C:\\Users\\User04\\Documents\\metamaterial_guide_otimization\\simulation_results\\full_optimization_data_20250818_192228.csv"
+    file_to_analyze = "Caminho\\Para\\Seu\\arquivo.csv"
     
     run_full_analysis(file_to_analyze)
