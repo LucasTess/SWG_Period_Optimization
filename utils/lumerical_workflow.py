@@ -71,7 +71,7 @@ def _create_and_run_eme(mode, chromosome, lms_path, construction_lsf_path, simul
         
         # --- [CORREÇÃO 2 AQUI] ---
         # O resultado é um struct com 'wavelength' e 's11', 's12', etc.
-        wavelengths = S_matrix_dataset['wavelength']
+        wavelengths = S_matrix_dataset['wavelength'].flatten() 
         # Converte comprimentos de onda (m) para frequências (Hz) para o fitness
         c = 299792458.0 
         frequencies = c / wavelengths
@@ -83,7 +83,8 @@ def _create_and_run_eme(mode, chromosome, lms_path, construction_lsf_path, simul
         S_matrix_3D[0, 1, :] = S_matrix_dataset['s12']
         S_matrix_3D[1, 0, :] = S_matrix_dataset['s21']
         S_matrix_3D[1, 1, :] = S_matrix_dataset['s22']
-        
+        # print("S21 Lum Workflow")
+        # print(S_matrix_3D[1, 0, :])
         # Retorna a Matriz S e as FREQUÊNCIAS (que o fitness_functions.py espera)
         return S_matrix_3D, frequencies
 

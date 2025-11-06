@@ -1,0 +1,44 @@
+{
+    "experiment_start_time": "2025-11-03T16:42:30.253207",
+    "last_update": "2025-11-03T16:43:19.504976",
+    "current_duration": "0:00:49.251769",
+    "generations_processed": 2,
+    "population_size": 3,
+    "mutation_rate": 0.2,
+    "max_generations_set": 2,
+    "best_individual_so_far": {
+        "Lambda": 2.6804568540984704e-07,
+        "DC": 0.5916454871309893,
+        "w": 5.033467353283044e-07,
+        "w_c": 1.5557034730948336e-07,
+        "N": 195,
+        "fitness": 0.2680413509474343
+    },
+    "best_fitness_so_far": 0.2680413509474343,
+    "parameter_ranges": {
+        "Lambda": [
+            2e-07,
+            4e-07
+        ],
+        "DC": [
+            0.3,
+            0.7
+        ],
+        "w": [
+            4e-07,
+            6e-07
+        ],
+        "w_c": [
+            1e-07,
+            4.8e-07
+        ],
+        "N": [
+            2,
+            500
+        ]
+    },
+    "fitness_history": [
+        0.26644288146369133,
+        0.2680413509474343
+    ]
+}
