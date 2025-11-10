@@ -47,9 +47,9 @@ _simulation_lsf_script_path = os.path.join(_project_directory, "resources", _sim
 # <--- MUDANÇA: Diretório de espectros H5 removido (não é mais usado)
 
 # --- Configuração do Algoritmo Genético ---
-population_size = 2
+population_size = 50
 mutation_rate = 0.2
-num_generations = 2
+num_generations = 160
 
 # --- Critério de Convergência ---
 enable_convergence_check = True
@@ -136,10 +136,6 @@ print(f"Configurando a otimização...")
 if FITNESS_STRATEGY_NAME == "delta_amp":
     fitness_calculator = DeltaAmpStrategy()
     print(f"Estratégia selecionada: {fitness_calculator.__class__.__name__}")
-
-# Em main.py
-
-# ... (bloco if "delta_amp") ...
 
 elif FITNESS_STRATEGY_NAME == "highpass":
     print(f"Estratégia selecionada: HighpassStrategy")
