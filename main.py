@@ -62,7 +62,7 @@ clean_enable = True
 
 # <--- MUDANÇA: Ranges de Parâmetros (Novo cromossomo) ---
 Lambda_range = (0.2e-6, 0.4e-6)
-DC_range = (0.3, 0.7)
+DC_range = (0.1, 0.9)
 w_range = (0.4e-6, 0.6e-6)
 # w_c_range é o limite absoluto. genetic.py aplica a restrição w_c < 0.8*w
 w_c_range = (1e-7, w_range[1] * 0.8) 
@@ -87,9 +87,9 @@ BANDWIDTH_NM = 5 # O "alvo" da banda passante/refletida (nm)
 TRANSITION_BANDWIDTH_NM = 20 # <--- MUDANÇA (em nm)
 
 # Pesos (inalterados)
-WEIGHT_REJECTION = 0.30
-WEIGHT_PASSBAND = 0.30
-WEIGHT_TRANSITION = 0.40
+WEIGHT_REJECTION = 0.50
+WEIGHT_PASSBAND = 0.20
+WEIGHT_TRANSITION = 0.30
 
 # --- Verificação de Sanidade dos Pesos ---
 if not np.isclose(WEIGHT_REJECTION + WEIGHT_PASSBAND + WEIGHT_TRANSITION, 1.0):
