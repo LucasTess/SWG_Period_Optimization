@@ -1,0 +1,21 @@
+{
+    "start_index": 1,
+    "all_experiment_results": [
+        {
+            "target_wavelength_nm": 1430.0,
+            "attempted_bandwidth_nm": 5,
+            "best_fitness_achieved": 0.49998767072521366,
+            "results_csv_path": "C:\\Users\\USUARIO\\OneDrive\\Lumerical\\SWG_Period_Optimization\\simulation_results\\reflection_band_1430.0nm_5nm_20251117_150807_full_data.csv",
+            "status": "Fail"
+        }
+    ],
+    "all_results": [
+        {
+            "target_wavelength_nm": 1430.0,
+            "attempted_bandwidth_nm": 5,
+            "best_fitness_achieved": 0.49998767072521366,
+            "results_csv_path": "C:\\Users\\USUARIO\\OneDrive\\Lumerical\\SWG_Period_Optimization\\simulation_results\\reflection_band_1430.0nm_5nm_20251117_150807_full_data.csv",
+            "status": "Fail"
+        }
+    ]
+}

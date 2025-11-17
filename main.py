@@ -1,4 +1,6 @@
-# main.py (Modularizado para ser chamado por um supervisor)
+# main.py (Modularizado para ser um "motor" puro)
+# [CORRIGIDO] Alinhado com a assinatura de função exata
+# do seu 'utils/experiment_recorder.py'
 
 import sys
 import os
@@ -27,52 +29,9 @@ from utils.fitness_functions import (
 from utils.file_handler import clean_simulation_directory
 from utils.analysis import run_full_analysis, analyze_peak_properties
 
-# --- [NOVO] Configuração Padrão ---
-# Toda a configuração foi movida para este dicionário para que
-# possa ser facilmente importada e modificada pelo supervisor.
-DEFAULT_CONFIG = {
-    "file_paths": {
-        "original_lms_file_name": "SWG_period_EME.lms",
-        "geometry_lsf_script_name": "create_guide_EME.lsf",
-        "simulation_lsf_script_name": "run_simu_guide_EME.lsf",
-        "simulation_results_directory_name": "simulation_results"
-    },
-    "ga_params": {
-        "population_size": 4,
-        "mutation_rate": 0.2,
-        "num_generations": 4,
-        "enable_convergence_check": True,
-        "convergence_patience_ratio": 0.2, # % de num_generations
-        "min_convergence_patience": 20
-    },
-    "ga_ranges": {
-        "Lambda_range": (0.2e-6, 0.4e-6),
-        "DC_range": (0.1, 0.9),
-        "w_range": (0.4e-6, 0.6e-6),
-        "w_c_range_max_ratio": 0.8, # w_c < 0.8 * w
-        "N_range": (2, 500)
-    },
-    "fitness_params": {
-        "strategy_name": "reflection_band", # "highpass", "lowpass", "bandpass", "reflection_band"
-        "cutoff_wl_nm": 1565,
-        "center_wl_nm": 1500,
-        "bandwidth_nm": 5,
-        "transition_bw_nm": 20,
-        "weights": {
-            "rejection": 0.50,
-            "passband": 0.20,
-            "transition": 0.30
-        }
-    },
-    "run_settings": {
-        "clean_temp_files": True,
-        "lumerical_hide_ui": True
-    }
-}
-# --- Fim da Configuração Padrão ---
-
-
-# --- [NOVO] Lógica Principal Movida para uma Função ---
+# --- Lógica Principal Movida para uma Função ---
+# Este script agora é um módulo e só define esta função "trabalhadora".
+# Ele não tem mais um DEFAULT_CONFIG global.
 def run_optimization(config: dict):
     """
     Executa um experimento de otimização completo com base
@@ -92,11 +51,7 @@ def run_optimization(config: dict):
     _temp_directory = os.path.join(_project_directory, "temp")
     os.makedirs(_temp_directory, exist_ok=True)
     _simulation_results_directory = os.path.join(_project_directory, fp['simulation_results_directory_name'])
-    
-    # Cria um subdiretório para este experimento específico (baseado no alvo)
-    experiment_name = f"{fit_p['strategy_name']}_{fit_p['center_wl_nm']}nm_{fit_p['bandwidth_nm']}nm"
-    _exp_output_directory = os.path.join(_simulation_results_directory, experiment_name)
-    os.makedirs(_exp_output_directory, exist_ok=True)
+    os.makedirs(_simulation_results_directory, exist_ok=True) # Garante que a pasta exista
 
     # Caminhos de arquivos
     _original_lms_path = os.path.join(_project_directory, fp['original_lms_file_name'])
@@ -115,70 +70,90 @@ def run_optimization(config: dict):
     )
 
     # Ranges do GA
-    w_c_range = (1e-7, ga_r['w_range'][1] * ga_r['w_c_range_max_ratio'])
+    w_range = ga_r['w_range'] # Pega o w_range para calcular o w_c_range
+    w_c_range = (1e-7, w_range[1] * ga_r['w_c_range_max_ratio'])
     
     # --- 2. Conversão de Unidades e Lógica de Fitness ---
     c = 299792458
     
+    # Desempacota os parâmetros de fitness
+    FITNESS_STRATEGY_NAME = fit_p['strategy_name']
+    CUTOFF_WAVELENGTH_NM = fit_p['cutoff_wl_nm']
+    CENTER_WAVELENGTH_NM = fit_p['center_wl_nm']
+    BANDWIDTH_NM = fit_p['bandwidth_nm']
+    TRANSITION_BANDWIDTH_NM = fit_p['transition_bw_nm']
+    
+    # Desempacota os pesos
+    w = fit_p['weights']
+    WEIGHT_REJECTION = w['rejection']
+    WEIGHT_PASSBAND = w['passband']
+    WEIGHT_TRANSITION = w['transition']
+
     # Conversão para Cutoff (High/Low pass)
-    f_cutoff_hz = c / (fit_p['cutoff_wl_nm'] * 1e-9)
+    f_cutoff_hz = c / (CUTOFF_WAVELENGTH_NM * 1e-9)
 
     # Conversão para Bandpass (Centro e Largura)
-    w_center_m = fit_p['center_wl_nm'] * 1e-9
-    w_bw_m = fit_p['bandwidth_nm'] * 1e-9
+    w_center_m = CENTER_WAVELENGTH_NM * 1e-9
+    w_bw_m = BANDWIDTH_NM * 1e-9
     f_center_hz = c / w_center_m
     f_lower_edge_hz = c / (w_center_m + (w_bw_m / 2))
     f_upper_edge_hz = c / (w_center_m - (w_bw_m / 2))
     bandwidth_hz = f_upper_edge_hz - f_lower_edge_hz
 
     # Conversão para Largura de Banda de Transição
-    w_trans_bw_m = fit_p['transition_bw_nm'] * 1e-9
+    w_trans_bw_m = TRANSITION_BANDWIDTH_NM * 1e-9
     f_trans_edge_hz = c / (w_center_m - (w_trans_bw_m / 2))
     transition_bandwidth_hz = abs(f_trans_edge_hz - f_center_hz) * 2
     
+    # Gera o timestamp para este experimento
+    experiment_start_time = datetime.datetime.now()
+    timestamp_str = experiment_start_time.strftime('%Y%m%d_%H%M%S')
+    
+    # Cria o prefixo único para este experimento
+    experiment_prefix = f"{fit_p['strategy_name']}_{fit_p['center_wl_nm']}nm_{fit_p['bandwidth_nm']}nm_{timestamp_str}"
+    
     print("--------------------------------------------------------------------------")
-    print(f"Iniciando Otimização para: {experiment_name}")
-    print(f"Estratégia: {fit_p['strategy_name']}")
-    print(f"--> Alvo Central: {f_center_hz/1e12:.2f} THz ({fit_p['center_wl_nm']} nm)")
-    print(f"--> Largura de Banda Alvo: {bandwidth_hz/1e12:.4f} THz ({fit_p['bandwidth_nm']} nm)")
-    print(f"--> Largura de Transição: {transition_bandwidth_hz/1e12:.4f} THz ({fit_p['transition_bw_nm']} nm)")
-    print(f"--> Pesos: Rej={fit_p['weights']['rejection']}, Pass={fit_p['weights']['passband']}, Trans={fit_p['weights']['transition']}")
+    print(f"Iniciando Otimização: {experiment_prefix}")
+    print(f"Estratégia: {FITNESS_STRATEGY_NAME}")
+    print(f"--> Alvo Central: {f_center_hz/1e12:.2f} THz ({CENTER_WAVELENGTH_NM} nm)")
+    print(f"--> Largura de Banda Alvo: {bandwidth_hz/1e12:.4f} THz ({BANDWIDTH_NM} nm)")
+    print(f"--> Largura de Transição: {transition_bandwidth_hz/1e12:.4f} THz ({TRANSITION_BANDWIDTH_NM} nm)")
+    print(f"--> Pesos: Rej={WEIGHT_REJECTION}, Pass={WEIGHT_PASSBAND}, Trans={WEIGHT_TRANSITION}")
     print(f"--> GA: {population_size} indivíduos, {num_generations} gerações.")
     print(f"--> Paciência de Convergência: {CONVERGENCE_PATIENCE} gerações")
     print("--------------------------------------------------------------------------")
     
     # Instanciação da Estratégia de Fitness
     fitness_calculator = None
-    w = fit_p['weights']
     
-    if fit_p['strategy_name'] == "delta_amp":
+    if FITNESS_STRATEGY_NAME == "delta_amp":
         fitness_calculator = DeltaAmpStrategy()
-    elif fit_p['strategy_name'] == "highpass":
+    elif FITNESS_STRATEGY_NAME == "highpass":
         fitness_calculator = HighpassStrategy(
             f_cutoff=f_cutoff_hz,
             transition_bandwidth=transition_bandwidth_hz,
-            w_rejection=w['rejection'], w_passband=w['passband'], w_transition=w['transition']
+            w_rejection=WEIGHT_REJECTION, w_passband=WEIGHT_PASSBAND, w_transition=WEIGHT_TRANSITION
         )
-    elif fit_p['strategy_name'] == "lowpass":
+    elif FITNESS_STRATEGY_NAME == "lowpass":
         fitness_calculator = LowpassStrategy(
             f_cutoff=f_cutoff_hz,
             transition_bandwidth=transition_bandwidth_hz,
-            w_rejection=w['rejection'], w_passband=w['passband'], w_transition=w['transition']
+            w_rejection=WEIGHT_REJECTION, w_passband=WEIGHT_PASSBAND, w_transition=WEIGHT_TRANSITION
         )
-    elif fit_p['strategy_name'] == "bandpass":
+    elif FITNESS_STRATEGY_NAME == "bandpass":
         fitness_calculator = BandpassStrategy(
             f_center=f_center_hz, bandwidth=bandwidth_hz,
             transition_bandwidth=transition_bandwidth_hz,
-            w_rejection=w['rejection'], w_passband=w['passband'], w_transition=w['transition']
+            w_rejection=WEIGHT_REJECTION, w_passband=WEIGHT_PASSBAND, w_transition=WEIGHT_TRANSITION
         )
-    elif fit_p['strategy_name'] == "reflection_band":
+    elif FITNESS_STRATEGY_NAME == "reflection_band":
         fitness_calculator = ReflectionBandStrategy(
             f_center=f_center_hz, bandwidth=bandwidth_hz,
             transition_bandwidth=transition_bandwidth_hz,
-            w_rejection=w['rejection'], w_passband=w['passband'], w_transition=w['transition']
+            w_rejection=WEIGHT_REJECTION, w_passband=WEIGHT_PASSBAND, w_transition=WEIGHT_TRANSITION
         )
     else:
-        raise ValueError(f"Estratégia de fitness '{fit_p['strategy_name']}' é inválida.")
+        raise ValueError(f"Estratégia de fitness '{FITNESS_STRATEGY_NAME}' é inválida.")
 
     # --- 3. Execução da Otimização ---
     shutil.copy(_original_lms_path, _temp_lms_base_path)
@@ -191,17 +166,14 @@ def run_optimization(config: dict):
     optimizer.initialize_population()
     current_population = optimizer.population
 
-    experiment_start_time = datetime.datetime.now()
-    # Salva os resultados no subdiretório específico do experimento
-    full_data_csv_path = os.path.join(_exp_output_directory, "full_optimization_data.csv")
-    #best_fitness_csv_path = os.path.join(_exp_output_directory, "best_fitness_history.csv")
-
-
+    # Define o caminho do CSV de dados completos (o único caminho de que o recorder precisa)
+    full_data_csv_path = os.path.join(_simulation_results_directory, f"{experiment_prefix}_full_data.csv")
+    
     generations_processed = 0
-    all_individuals_data = []
+    all_individuals_data = [] # A lista mestre que é passada para o recorder
     best_fitness_so_far = -float('inf')
     generations_without_improvement = 0
-    best_fitness_history = [] # Para plotagem
+    # best_fitness_history não é mais necessário aqui, pois o optimizer_instance cuida disso
 
     try:
         with lumapi.MODE(hide=run_s['lumerical_hide_ui']) as mode:
@@ -245,29 +217,26 @@ def run_optimization(config: dict):
                             real_peak_wl_nm, real_bw_hz = analyze_peak_properties(best_gen_S_matrix, frequencies)
                     except Exception as e:
                         print(f"!!! Erro ao analisar o melhor indivíduo da geração: {e}")
-
-                # --- [CORREÇÃO APLICADA] ---
                 
-                # 1. Salva uma cópia dos dados da geração ATUAL (antes de evoluir)
+                # Salva uma cópia dos dados da geração ATUAL (antes de evoluir)
                 population_before_evolution = copy.deepcopy(current_population)
                 scores_for_this_generation = copy.deepcopy(fitness_scores_for_gen)
 
-                # 2. Evoluir (cria a PRÓXIMA geração)
+                # Evolui para a PRÓXIMA geração
                 try:
-                    # Passa os scores da geração atual para o método evolve
-                    current_population = optimizer.evolve(fitness_scores_for_gen)
-                    best_fitness_history.append(optimizer.best_fitness) # Salva o melhor fitness da história
+                    current_population = optimizer.evolve(scores_for_this_generation)
                 except ValueError as e:
                     print(f"!!! Erro na evolução da população: {e}")
                     break
                 
                 print(f"  [Relatório] Salvando relatório e CSV para a Geração {gen_num + 1}...")
                 
-                # 3. Registra os dados da geração que acabamos de processar
+                # --- [CHAMADA DE FUNÇÃO CORRIGIDA] ---
+                # Corresponde exatamente à assinatura da função que você forneceu
                 record_experiment_results(
                     # Caminhos e Tempo
-                    output_directory=_simulation_results_directory,
-                    full_data_csv_path=full_data_csv_path,
+                    output_directory=_simulation_results_directory, # Pasta raiz de resultados
+                    full_data_csv_path=full_data_csv_path, # Caminho único com timestamp
                     experiment_start_time=experiment_start_time,
                     
                     # Estado do Otimizador
@@ -276,12 +245,12 @@ def run_optimization(config: dict):
                     
                     # Dados da Geração (para CSV e Análise)
                     all_individuals_data_list=all_individuals_data, # Passa a lista mestre
-                    current_population=current_population,
-                    fitness_scores_for_gen=fitness_scores_for_gen, 
+                    current_population=population_before_evolution, # Geração N
+                    fitness_scores_for_gen=scores_for_this_generation, # Scores da Geração N
 
-                    # --- [NOVO] Passa os dados analisados para o JSON ---
+                    # Dados analisados para o JSON
                     real_peak_wl_nm=real_peak_wl_nm,
-                    real_bw_hz=real_bw_hz,           
+                    real_bw_hz=real_bw_hz,            
 
                     # Configs de Parâmetros (para JSON)
                     Lambda_range=ga_r['Lambda_range'],
@@ -291,15 +260,20 @@ def run_optimization(config: dict):
                     N_range=ga_r['N_range'],
                     
                     # Configs de Fitness (para JSON e CSV)
-                    fitness_strategy_name=fit_p['strategy_name'],
-                    center_wl_nm=fit_p['center_wl_nm'],
-                    bandwidth_nm=fit_p['center_bandwidth_nm'],
-                    transition_bw_nm=fit_p["transition_bw_nm"],
+                    fitness_strategy_name=FITNESS_STRATEGY_NAME,
+                    center_wl_nm=CENTER_WAVELENGTH_NM,
+                    bandwidth_nm=BANDWIDTH_NM,
+                    transition_bw_nm=TRANSITION_BANDWIDTH_NM,
                     weight_rej=WEIGHT_REJECTION,
                     weight_pass=WEIGHT_PASSBAND,
                     weight_trans=WEIGHT_TRANSITION
                 )
                 # --- [FIM DA CORREÇÃO] ---
+                
+                # Reativa a chamada para análise (pairplot/heatmap)
+                if all_individuals_data:
+                    run_full_analysis(full_data_csv_path) 
+                    print(f"  [Análise] Gráficos de análise atualizados e salvos.")
 
                 # Lógica de convergência
                 if enable_convergence_check:
@@ -344,6 +318,48 @@ def run_optimization(config: dict):
 if __name__ == "__main__":
     
     print("Executando main.py como script principal com configurações padrão.")
+    
+    # --- [NOVO] Configuração Padrão ---
+    # Definida localmente, apenas para testes. Não é visível para o supervisor.
+    DEFAULT_CONFIG = {
+        "file_paths": {
+            "original_lms_file_name": "SWG_period_EME.lms",
+            "geometry_lsf_script_name": "create_guide_EME.lsf",
+            "simulation_lsf_script_name": "run_simu_guide_EME.lsf",
+            "simulation_results_directory_name": "simulation_results"
+        },
+        "ga_params": {
+            "population_size": 4, # Tamanho pequeno para teste rápido
+            "mutation_rate": 0.2,
+            "num_generations": 2, # Poucas gerações para teste rápido
+            "enable_convergence_check": True,
+            "convergence_patience_ratio": 0.2,
+            "min_convergence_patience": 20
+        },
+        "ga_ranges": {
+            "Lambda_range": (0.2e-6, 0.4e-6),
+            "DC_range": (0.1, 0.9),
+            "w_range": (0.4e-6, 0.6e-6),
+            "w_c_range_max_ratio": 0.8,
+            "N_range": (2, 500)
+        },
+        "fitness_params": {
+            "strategy_name": "reflection_band",
+            "cutoff_wl_nm": 1565,
+            "center_wl_nm": 1500,
+            "bandwidth_nm": 5,
+            "transition_bw_nm": 20,
+            "weights": {
+                "rejection": 0.50,
+                "passband": 0.20,
+                "transition": 0.30
+            }
+        },
+        "run_settings": {
+            "clean_temp_files": True,
+            "lumerical_hide_ui": True
+        }
+    }
     
     # Chama a função de otimização com a configuração padrão
     run_optimization(DEFAULT_CONFIG)
