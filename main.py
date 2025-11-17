@@ -23,7 +23,7 @@ from utils.fitness_functions import (
     ReflectionBandStrategy
 )
 from utils.file_handler import clean_simulation_directory
-from utils.analysis import run_full_analysis
+from utils.analysis import run_full_analysis, analyze_peak_properties
 
 # --- Configurações Globais ---
 _project_directory = os.getcwd()
@@ -78,7 +78,7 @@ c = 299792458  # Velocidade da luz em m/s
 CUTOFF_WAVELENGTH_NM = 1565 
 
 # Alvos para Bandpass / ReflectionBand
-CENTER_WAVELENGTH_NM = 1485 
+CENTER_WAVELENGTH_NM = 1500 
 BANDWIDTH_NM = 5 # O "alvo" da banda passante/refletida (nm)
 
 # A "agressividade" das bordas. 
@@ -222,7 +222,7 @@ try:
             generations_processed += 1
             print(f"\n--- Processando Geração {gen_num + 1}/{num_generations} ---")
       
-            # <--- MUDANÇA: Chamada da simulação EME
+            # Simulação EME
             # Retorna dados na memória, não caminhos de arquivo
             all_S_matrices_for_gen, frequencies = simulate_generation_lumerical(
                 mode, current_population, _temp_lms_base_path,
@@ -255,16 +255,27 @@ try:
                         print(f"!!! Erro no cálculo do fitness para um indivíduo: {e}")
                         fitness_score = -np.inf
                     fitness_scores_for_gen.append(fitness_score)
-            
-            # Coleta de dados para o CSV
 
+            # --- [NOVO] Bloco de Análise do Melhor Indivíduo (Rápido) ---
+            real_peak_wl_nm = 0.0
+            real_bw_hz = 0.0
+            if frequencies is not None and fitness_scores_for_gen:
+                try:
+                    best_gen_index = np.argmax(fitness_scores_for_gen)
+                    best_gen_S_matrix = all_S_matrices_for_gen[best_gen_index]
+                    if best_gen_S_matrix is not None:
+                        # Chama a análise "cara" APENAS UMA VEZ
+                        real_peak_wl_nm, real_bw_hz = analyze_peak_properties(best_gen_S_matrix, frequencies)
+                except Exception as e:
+                    print(f"!!! Erro ao analisar o melhor indivíduo da geração: {e}")
+            # --- Fim do Bloco de Análise ---
 
+            # Evoluir
             try:
                 current_population = optimizer.evolve(fitness_scores_for_gen)
             except ValueError as e:
                 print(f"!!! Erro na evolução da população: {e}")
                 break
-# SUBSTITUA PELO BLOCO ABAIXO
             
             print(f"  [Relatório] Salvando relatório e CSV para a Geração {gen_num + 1}...")
             
@@ -279,11 +290,15 @@ try:
                 optimizer_instance=optimizer,
                 generations_processed=generations_processed,
                 
-                # Dados da Geração (para CSV)
+                # Dados da Geração (para CSV e Análise)
                 all_individuals_data_list=all_individuals_data, # Passa a lista mestre
                 current_population=current_population,
-                fitness_scores_for_gen=fitness_scores_for_gen,
-                
+                fitness_scores_for_gen=fitness_scores_for_gen, 
+
+                # --- [NOVO] Passa os dados analisados para o JSON ---
+                real_peak_wl_nm=real_peak_wl_nm,
+                real_bw_hz=real_bw_hz,           
+
                 # Configs de Parâmetros (para JSON)
                 Lambda_range=Lambda_range,
                 DC_range=DC_range,

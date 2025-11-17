@@ -1,11 +1,17 @@
-# experiment_end.py (Modificado para centralizar JSON e CSV)
+# utils/experiment_recorder.py
+# Centraliza o salvamento de JSON (com análise) e CSV (rápido).
 
 import os
 import datetime
 import json
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd  # <--- Importação necessária
+import pandas as pd
+# Importa a função de análise que será chamada 1x por geração
+from utils.analysis import analyze_peak_properties 
+
+# Velocidade da luz (para conversão nm <-> Hz)
+c = 299792458.0 
 
 def record_experiment_results(
     # --- Parâmetros de Configuração e Caminho ---
@@ -18,9 +24,13 @@ def record_experiment_results(
     generations_processed,
     
     # --- Dados da Geração Atual (para CSV) ---
-    all_individuals_data_list, # A lista mestre de dados
+    all_individuals_data_list,  # A lista mestre de dados
     current_population,
     fitness_scores_for_gen,
+    
+    # --- Dados para Análise do Melhor Indivíduo ---
+    real_peak_wl_nm,
+    real_bw_hz,
     
     # --- Configs de Parâmetros (para JSON) ---
     Lambda_range, DC_range, w_range, w_c_range, N_range,
@@ -47,7 +57,28 @@ def record_experiment_results(
     current_time = datetime.datetime.now()
     duration = current_time - experiment_start_time
 
-    # --- 1. Lógica do JSON (Atualizada com Goal 1) ---
+    # --- Análise do Melhor Indivíduo (para JSON) ---
+    best_gen_analysis = {}
+    try:
+        # Calcula a largura de banda real em nm (para facilitar a leitura no JSON)
+        real_bw_nm = 0.0
+        if real_bw_hz > 0 and real_peak_wl_nm > 0:
+            f_peak_hz = c / (real_peak_wl_nm * 1e-9)
+            f_low = f_peak_hz - (real_bw_hz / 2)
+            f_high = f_peak_hz + (real_bw_hz / 2)
+            wl_low_nm = (c / f_low) * 1e9
+            wl_high_nm = (c / f_high) * 1e9
+            real_bw_nm = abs(wl_low_nm - wl_high_nm)
+
+        best_gen_analysis = {
+            "real_peak_wl_nm": real_peak_wl_nm,
+            "real_bw_hz": real_bw_hz,
+            "real_bw_nm": real_bw_nm
+        }
+    except Exception as e:
+        print(f"!!! Erro ao calcular real_bw_nm para JSON: {e}")
+
+    # --- 1. Lógica do JSON ---
     results_data = {
         "experiment_start_time": experiment_start_time.isoformat(),
         "last_update": current_time.isoformat(),
@@ -58,14 +89,11 @@ def record_experiment_results(
         "max_generations_set": optimizer_instance.generations,
         "best_individual_so_far": optimizer_instance.best_individual,
         "best_fitness_so_far": optimizer_instance.best_fitness,
+        "analysis_of_best_in_gen": best_gen_analysis,  # Dados extras aqui
         "parameter_ranges": {
-            "Lambda": Lambda_range,
-            "DC": DC_range,
-            "w": w_range,
-            "w_c": w_c_range,
-            "N": N_range
+            "Lambda": Lambda_range, "DC": DC_range, "w": w_range,
+            "w_c": w_c_range, "N": N_range
         },
-        # --- [NOVO] Adiciona a configuração de fitness ao JSON ---
         "fitness_configuration": {
             "strategy": fitness_strategy_name,
             "center_wavelength_nm": center_wl_nm,
@@ -86,17 +114,16 @@ def record_experiment_results(
         print(f"!!! Erro ao salvar/atualizar resultados do experimento (JSON): {e}")
 
     
-    # --- 2. Lógica do CSV (Movida do main.py para cá - Goal 2) ---
+    # --- 2. Lógica do CSV (RÁPIDA - Sem análise "cara") ---
     
     # Adiciona os dados da geração atual à lista mestre
     for i, chromosome in enumerate(current_population):
         individual_data = chromosome.copy()
         individual_data['Fitness'] = fitness_scores_for_gen[i]
-        individual_data['generation'] = generations_processed # (gen_num + 1)
+        individual_data['generation'] = generations_processed
         individual_data['fitness_strategy'] = fitness_strategy_name
         
-        # --- [NOVO] Adiciona os parâmetros de fitness ao CSV ---
-        # Útil se você mudar os pesos no meio de um experimento
+        # Parâmetros de fitness (para rastreamento)
         individual_data['target_center_nm'] = center_wl_nm
         individual_data['target_bw_nm'] = bandwidth_nm
         individual_data['target_trans_bw_nm'] = transition_bw_nm
@@ -104,9 +131,11 @@ def record_experiment_results(
         individual_data['w_pass'] = weight_pass
         individual_data['w_trans'] = weight_trans
         
+        # A análise "cara" foi removida daqui
+        
         all_individuals_data_list.append(individual_data)
 
-    # Salva o CSV completo (sobrescrevendo o anterior com os novos dados)
+    # Salva o CSV completo
     if all_individuals_data_list:
         try:
             df_all_data = pd.DataFrame(all_individuals_data_list)
@@ -130,6 +159,6 @@ def record_experiment_results(
         except Exception as e:
             print(f"!!! Erro ao salvar/atualizar gráfico de fitness: {e}")
         finally:
-            plt.close() # Libera memória
+            plt.close()  # Libera memória
     else:
         print("Nenhum histórico de fitness para plotar.")
