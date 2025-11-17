@@ -1,0 +1,62 @@
+# Este script AGORA assume que o grupo "Guia Metamaterial" e suas propriedades
+# já foram criados e definidos pelo Python.
+
+# 1. Lê os parâmetros do grupo existente
+height = getnamed("Guia Metamaterial", "height");
+w = getnamed("Guia Metamaterial", "w");
+w_c = getnamed("Guia Metamaterial", "w_c");
+Lambda = getnamed("Guia Metamaterial", "Lambda");
+DC = getnamed("Guia Metamaterial", "DC");
+material = getnamed("Guia Metamaterial", "material");
+
+# 2. Constrói a geometria com base nesses parâmetros
+
+# Cria substrato
+addrect;
+set("material", 'SiO2 (Glass) - Palik');
+set("name","Substrato - SiO2");
+set("x",0); set("x span", Lambda*8); set("y", 0); set("y span", w*3);
+set("z", -0.22e-6); set("z span", 0.22e-6);
+
+# Cria Agua
+addrect;
+set("material", 'Agua_deion');
+set("name","Agua");
+set("x",0); set("x span", Lambda*8); set("y", 0); set("y span", w*3);
+set("z", 0); set("z span", height*3); set("alpha", 0.4);
+
+# Cria guia anterior
+addrect;
+set("x min", -2*Lambda);
+set("x max", -Lambda/2);
+set("y", 0); set('y span', w);
+set("z", -0.11e-6 + height/2); set('z span', height);
+set("name", "Guide in");
+set("material", material); set("alpha", 1);
+
+# Cria o segmento do guia
+addrect;
+set("x min", -Lambda/2);
+set("x max", -Lambda/2 + Lambda*DC);
+set("y", 0); set('y span', w);
+set("z", -0.11e-6 + height/2); set('z span', height);
+set("name", "Segment period");
+set("material", material);
+
+# Cria o segmento do nucleo do guia
+addrect;
+set("x min", -Lambda/2 + Lambda*DC);
+set("x max", Lambda/2);
+set("y", 0); set('y span', w_c);
+set("z", -0.11e-6 + height/2); set('z span', height);
+set("name", "Segment core");
+set("material", material);
+
+# Cria guia posterior
+addrect;
+set("x min", Lambda/2);
+set("x max", Lambda*2);
+set("y", 0); set('y span', w);
+set("z", -0.11e-6 + height/2); set('z span', height);
+set("name", "Guide out");
+set("material", material); set("alpha", 1);

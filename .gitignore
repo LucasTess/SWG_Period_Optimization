@@ -2,6 +2,7 @@
 *.h5
 *.fsp
 *.log
+*.lms
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
