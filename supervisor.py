@@ -29,9 +29,9 @@ DEFAULT_CONFIG = {
         "simulation_results_directory_name": "simulation_results"
     },
     "ga_params": {
-        "population_size": 4,
+        "population_size": 50,
         "mutation_rate": 0.2,
-        "num_generations": 4,
+        "num_generations": 160,
         "enable_convergence_check": True,
         "convergence_patience_ratio": 0.2, # % de num_generations
         "min_convergence_patience": 20
@@ -69,8 +69,8 @@ DEFAULT_CONFIG = {
 # 1. Definições da Varredura
 SWEEP_FITNESS_STRATEGY = "reflection_band"
 # Faixa segura baseada na janela de simulação [1400, 1600] nm
-WAVELENGTH_START_NM = 1430
-WAVELENGTH_STOP_NM = 1570
+WAVELENGTH_START_NM = 1450
+WAVELENGTH_STOP_NM = 1550
 WAVELENGTH_STEPS = 11
 
 # 2. Lógica de Repetição (Retry)
