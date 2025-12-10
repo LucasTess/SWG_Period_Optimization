@@ -1,98 +1,154 @@
 import os
 import json
-import numpy as np
+import glob
+import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
+from matplotlib.ticker import MultipleLocator, AutoMinorLocator
 
-def analyze_best_fitness_from_json(results_directory):
-    """
-    Lê todos os arquivos .json em um diretório, extrai o valor de 'best_fitness',
-    calcula estatísticas e gera um boxplot da distribuição desses valores.
+# --- CONFIGURAÇÃO ---
+RESULTS_FOLDER = "simulation_results" 
+FITNESS_THRESHOLD = 0.75
 
-    Args:
-        results_directory (str): O caminho para a pasta que contém os arquivos .json.
-    """
+def compile_and_plot_results(folder_path):
+    print(f"Buscando arquivos JSON em: {folder_path}...")
     
-    fitness_values = []
+    scatter_data = []
+    evolution_data = []
     
-    print(f"Analisando arquivos .json no diretório: '{results_directory}'\n")
+    json_files = glob.glob(os.path.join(folder_path, "*.json"))
     
-    if not os.path.isdir(results_directory):
-        print(f"Erro: O diretório '{results_directory}' não foi encontrado.")
+    if not json_files:
+        print("Nenhum arquivo JSON encontrado.")
         return
 
-    for filename in os.listdir(results_directory):
-        if filename.endswith(".json"):
-            file_path = os.path.join(results_directory, filename)
-            
-            try:
-                with open(file_path, 'r') as f:
-                    data = json.load(f)
+    count_processed = 0
+    count_filtered = 0
+
+    for filepath in json_files:
+        try:
+            with open(filepath, 'r') as f:
+                data = json.load(f)
+                
+                fitness = data.get("best_fitness_so_far", 0.0)
+                
+                if fitness > FITNESS_THRESHOLD:
+                    filename = os.path.basename(filepath)
+                    analysis = data.get("analysis_of_best_in_gen", {})
+                    peak_wl = analysis.get("real_peak_wl_nm")
+                    bw = analysis.get("real_bw_nm")
                     
-                    if 'best_fitness_so_far' in data and data['best_fitness_so_far'] is not None:
-                        fitness = data['best_fitness_so_far']
-                        fitness_values.append(fitness)
-                        print(f"  - Arquivo '{filename}': best_fitness = {fitness:.4e}")
-                    else:
-                        print(f"  - AVISO: A chave 'best_fitness' não foi encontrada ou é nula no arquivo '{filename}'.")
+                    if peak_wl is not None and bw is not None:
+                        # 1. Dados Scatter
+                        scatter_data.append({
+                            "Filename": filename,
+                            "Fitness": fitness,
+                            "Peak_Wavelength_nm": peak_wl,
+                            "Bandwidth_nm": bw
+                        })
+                    
+                        # 2. Dados Evolução
+                        history = data.get("fitness_history", [])
+                        if history:
+                            evolution_data.append({
+                                "Filename": filename,
+                                "History": history,
+                                "FinalFitness": fitness,
+                                "PeakWL": peak_wl 
+                            })
                         
-            except json.JSONDecodeError:
-                print(f"  - ERRO: O arquivo '{filename}' não é um JSON válido.")
-            except Exception as e:
-                print(f"  - ERRO: Ocorreu um erro ao processar o arquivo '{filename}': {e}")
+                        count_filtered += 1
+                count_processed += 1
+        except Exception as e:
+            print(f"Erro ao ler {os.path.basename(filepath)}: {e}")
 
-    # --- CÁLCULO E RESULTADOS ESTATÍSTICOS ---
-    
-    if not fitness_values:
-        print("\nNenhum valor de 'best_fitness' foi encontrado para análise.")
+    print(f"Processados: {count_processed}. Filtrados (> {FITNESS_THRESHOLD}): {count_filtered}.")
+
+    if not scatter_data:
+        print("Nenhum dado atendeu aos critérios.")
         return
 
-    fitness_array = np.array(fitness_values)
+    # ==========================================
+    # GRÁFICO 1: Scatter Plot (Mantido igual)
+    # ==========================================
+    df = pd.DataFrame(scatter_data)
+    fig1, ax1 = plt.subplots(figsize=(12, 7))
     
-    mean_fitness = np.mean(fitness_array)
-    std_dev_fitness = np.std(fitness_array)
-    median_fitness = np.median(fitness_array) # Mediana é o centro do boxplot
-    num_files = len(fitness_array)
+    ax1.vlines(
+        x=df["Peak_Wavelength_nm"], ymin=0, ymax=df["Bandwidth_nm"], 
+        colors='black', linestyles='dashed', alpha=0.8, linewidth=1.5
+    )
+    scatter = ax1.scatter(
+        df["Peak_Wavelength_nm"], df["Bandwidth_nm"], 
+        c=df["Fitness"], cmap='viridis', s=110, alpha=1.0, edgecolors='k', zorder=3
+    )
+    cbar = plt.colorbar(scatter, ax=ax1)
+    cbar.set_label('Fitness Score', fontsize=11, weight='bold')
     
-    print("\n--- Resultados da Análise ---")
-    print(f"Número de experimentos analisados: {num_files}")
-    print(f"Média do best_fitness:           {mean_fitness:.4e}")
-    print(f"Mediana do best_fitness:          {median_fitness:.4e}")
-    print(f"Desvio Padrão do best_fitness:    {std_dev_fitness:.4e}")
-    print("-----------------------------\n")
+    ax1.set_title(f'Compilado: Largura de Banda vs. Centro (Fitness > {FITNESS_THRESHOLD})', fontsize=14, weight='bold')
+    ax1.set_xlabel('Comprimento de Onda Central Real (nm)', fontsize=12, weight='bold')
+    ax1.set_ylabel('Largura de Banda Real (nm)', fontsize=12, weight='bold')
+    ax1.set_ylim(bottom=0)
+    ax1.xaxis.set_major_locator(MultipleLocator(10))
+    ax1.xaxis.set_minor_locator(AutoMinorLocator(2))
+    ax1.grid(True, which='major', linestyle='--', linewidth=0.7, alpha=0.7)
+    ax1.grid(True, which='minor', linestyle=':', linewidth=0.5, alpha=0.4)
 
-    # --- GERAÇÃO E SALVAMENTO DO BOXPLOT ---
-    
-    print("Gerando boxplot da distribuição de fitness...")
-    
-    # Define o caminho de saída para a imagem no mesmo diretório
-    boxplot_output_path = os.path.join(results_directory, "fitness_distribution_boxplot.png")
-    
-    # Cria a figura do gráfico com um bom tamanho
-    plt.figure(figsize=(8, 10))
-    
-    # Usa a biblioteca Seaborn para criar um boxplot visualmente agradável
-    sns.boxplot(y=fitness_array, palette="viridis", width=0.4)
-    sns.swarmplot(y=fitness_array, color=".25") # Adiciona os pontos individuais sobre o gráfico
+    plt.tight_layout()
+    plt.savefig("compiled_results_scatter.png", dpi=300)
+    print("Gráfico 1 salvo: compiled_results_scatter.png")
 
-    # Adiciona títulos e labels para clareza
-    plt.title("Distribuição dos Melhores Fitness Entre os Experimentos", fontsize=16, pad=20)
-    plt.ylabel("Valor do Best Fitness (delta_amp)", fontsize=12)
-    plt.grid(True, axis='y', linestyle='--', alpha=0.7) # Adiciona uma grade horizontal
-    
-    # Salva a figura no arquivo e depois fecha para liberar memória
-    try:
-        plt.savefig(boxplot_output_path, dpi=300, bbox_inches='tight')
-        plt.close()
-        print(f"-> Boxplot salvo com sucesso em: {boxplot_output_path}")
-    except Exception as e:
-        print(f"!!! Erro ao salvar o boxplot: {e}")
-    # --- FIM DO BLOCO DO BOXPLOT ---
+    # ==========================================
+    # GRÁFICO 2: Evolução (Legenda com Comprimento de Onda)
+    # ==========================================
+    if evolution_data:
+        fig2, ax2 = plt.subplots(figsize=(13, 8)) # Mais largo para caber a legenda
+        
+        # --- ORDENAÇÃO ---
+        # Ordena os dados pelo Comprimento de Onda para a legenda ficar bonita
+        evolution_data.sort(key=lambda x: x["PeakWL"])
+        
+        # Cria a escala de cores
+        all_wls = [item["PeakWL"] for item in evolution_data]
+        norm = plt.Normalize(min(all_wls), max(all_wls))
+        cmap = plt.cm.turbo 
+        
+        for item in evolution_data:
+            history = item["History"]
+            generations = range(1, len(history) + 1)
+            peak_wl = item["PeakWL"]
+            final_fit = item["FinalFitness"]
+            
+            # Define cor baseada no WL
+            color = cmap(norm(peak_wl))
+            
+            # --- MUDANÇA: Label explícito para a legenda ---
+            label_text = f"{peak_wl:.1f} nm"
+            
+            ax2.plot(generations, history, label=label_text, color=color, linewidth=2, alpha=0.8)
+            ax2.scatter(len(history), final_fit, color=color, edgecolors='k', s=50, zorder=4)
 
+        ax2.set_title(f'Evolução do Fitness por Comprimento de Onda', fontsize=14, weight='bold')
+        ax2.set_xlabel('Geração', fontsize=12, weight='bold')
+        ax2.set_ylabel('Melhor Fitness', fontsize=12, weight='bold')
+        
+        ax2.grid(True, which='major', linestyle='-', linewidth=0.8, alpha=0.6)
+        ax2.grid(True, which='minor', linestyle=':', linewidth=0.5, alpha=0.4)
+        ax2.minorticks_on()
+        
+        # --- MUDANÇA: Legenda Externa ---
+        # bbox_to_anchor=(1.02, 1) coloca a legenda fora do gráfico, no canto superior direito
+        ax2.legend(title="Centro (nm)", title_fontsize='11', fontsize='10', 
+                   loc='upper left', bbox_to_anchor=(1.02, 1), borderaxespad=0.)
 
-if __name__ == '__main__':
-    # --- CONFIGURE O CAMINHO AQUI ---
-    # Altere este caminho para a sua pasta 'simulation_results'
-    directory_to_analyze = "C:\\Users\\User04\\Documents\\metamaterial_guide_otimization\\simulation_results"
-    
-    analyze_best_fitness_from_json(directory_to_analyze)
+        plt.tight_layout()
+        plt.savefig("compiled_fitness_evolution_legend.png", dpi=300)
+        print("Gráfico 2 salvo: compiled_fitness_evolution_legend.png")
+        
+    plt.show()
+
+if __name__ == "__main__":
+    if os.path.exists(RESULTS_FOLDER):
+        compile_and_plot_results(RESULTS_FOLDER)
+    else:
+        print(f"Pasta '{RESULTS_FOLDER}' não encontrada. Tentando diretório atual...")
+        compile_and_plot_results(".")
