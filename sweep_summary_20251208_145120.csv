@@ -1,0 +1,13 @@
+target_wavelength_nm,attempted_bandwidth_nm,best_fitness_achieved,results_csv_path,status
+1450.0,5,0.9313825239136084,C:\Users\User04\Documents\SWG_Period_Optimization\simulation_results\reflection_band_1450.0nm_5nm_20251118_173805_full_data.csv,Success
+1460.0,5,0.8906354770662058,C:\Users\User04\Documents\SWG_Period_Optimization\simulation_results\reflection_band_1460.0nm_5nm_20251119_034931_full_data.csv,Success
+1470.0,5,0.8825832388773305,C:\Users\User04\Documents\SWG_Period_Optimization\simulation_results\reflection_band_1470.0nm_5nm_20251124_105618_full_data.csv,Success
+1480.0,20,0.8481750822087168,C:\Users\User04\Documents\SWG_Period_Optimization\simulation_results\reflection_band_1480.0nm_20nm_20251125_235737_full_data.csv,Success
+1490.0,10,0.8893320304904553,C:\Users\User04\Documents\SWG_Period_Optimization\simulation_results\reflection_band_1490.0nm_10nm_20251126_215838_full_data.csv,Success
+1500.0,5,0.9326655540961903,C:\Users\User04\Documents\SWG_Period_Optimization\simulation_results\reflection_band_1500.0nm_5nm_20251127_074751_full_data.csv,Success
+1510.0,10,0.9065843850731965,C:\Users\User04\Documents\SWG_Period_Optimization\simulation_results\reflection_band_1510.0nm_10nm_20251128_035117_full_data.csv,Success
+1520.0,10,0.8078092557905596,C:\Users\User04\Documents\SWG_Period_Optimization\simulation_results\reflection_band_1520.0nm_10nm_20251129_052004_full_data.csv,Success
+1530.0,5,0.9431875901217958,C:\Users\User04\Documents\SWG_Period_Optimization\simulation_results\reflection_band_1530.0nm_5nm_20251129_185316_full_data.csv,Success
+1540.0,5,0.7426004484197172,C:\Users\User04\Documents\SWG_Period_Optimization\simulation_results\reflection_band_1540.0nm_5nm_20251130_065940_full_data.csv,Fail
+1540.0,10,0.9001114714506862,C:\Users\User04\Documents\SWG_Period_Optimization\simulation_results\reflection_band_1540.0nm_10nm_20251205_214856_full_data.csv,Success
+1550.0,20,0.775006758314805,C:\Users\User04\Documents\SWG_Period_Optimization\simulation_results\reflection_band_1550.0nm_20nm_20251209_163554_full_data.csv,Success
