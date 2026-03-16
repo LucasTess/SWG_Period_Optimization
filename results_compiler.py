@@ -7,10 +7,16 @@ from matplotlib.ticker import MultipleLocator, AutoMinorLocator
 
 # --- CONFIGURAÇÃO ---
 RESULTS_FOLDER = "simulation_results" 
+EXPORT_FOLDER = "compilation exports"  # Nova pasta de destino
 FITNESS_THRESHOLD = 0.75
 
 def compile_and_plot_results(folder_path):
     print(f"Buscando arquivos JSON em: {folder_path}...")
+    
+    # --- MUDANÇA: Cria a pasta de exportação se não existir ---
+    if not os.path.exists(EXPORT_FOLDER):
+        os.makedirs(EXPORT_FOLDER)
+        print(f"Pasta '{EXPORT_FOLDER}' criada com sucesso.")
     
     scatter_data = []
     evolution_data = []
@@ -68,7 +74,7 @@ def compile_and_plot_results(folder_path):
         return
 
     # ==========================================
-    # GRÁFICO 1: Scatter Plot (Mantido igual)
+    # GRÁFICO 1: Scatter Plot
     # ==========================================
     df = pd.DataFrame(scatter_data)
     fig1, ax1 = plt.subplots(figsize=(12, 7))
@@ -84,9 +90,11 @@ def compile_and_plot_results(folder_path):
     cbar = plt.colorbar(scatter, ax=ax1)
     cbar.set_label('Fitness Score', fontsize=11, weight='bold')
     
-    ax1.set_title(f'Compilado: Largura de Banda vs. Centro (Fitness > {FITNESS_THRESHOLD})', fontsize=14, weight='bold')
-    ax1.set_xlabel('Comprimento de Onda Central Real (nm)', fontsize=12, weight='bold')
-    ax1.set_ylabel('Largura de Banda Real (nm)', fontsize=12, weight='bold')
+    # Título removido para LaTeX
+    # ax1.set_title(...) 
+    
+    ax1.set_xlabel('Center Wavelength(nm)', fontsize=12, weight='bold')
+    ax1.set_ylabel('Bandwidth(nm)', fontsize=12, weight='bold')
     ax1.set_ylim(bottom=0)
     ax1.xaxis.set_major_locator(MultipleLocator(10))
     ax1.xaxis.set_minor_locator(AutoMinorLocator(2))
@@ -94,20 +102,20 @@ def compile_and_plot_results(folder_path):
     ax1.grid(True, which='minor', linestyle=':', linewidth=0.5, alpha=0.4)
 
     plt.tight_layout()
-    plt.savefig("compiled_results_scatter.png", dpi=300)
-    print("Gráfico 1 salvo: compiled_results_scatter.png")
+    
+    # --- MUDANÇA: Salvar dentro da pasta EXPORT_FOLDER ---
+    output_path1 = os.path.join(EXPORT_FOLDER, "compiled_results_scatter.pdf")
+    plt.savefig(output_path1, format='pdf', bbox_inches='tight')
+    print(f"Gráfico 1 salvo em: {output_path1}")
 
     # ==========================================
-    # GRÁFICO 2: Evolução (Legenda com Comprimento de Onda)
+    # GRÁFICO 2: Evolução
     # ==========================================
     if evolution_data:
-        fig2, ax2 = plt.subplots(figsize=(13, 8)) # Mais largo para caber a legenda
+        fig2, ax2 = plt.subplots(figsize=(13, 8))
         
-        # --- ORDENAÇÃO ---
-        # Ordena os dados pelo Comprimento de Onda para a legenda ficar bonita
         evolution_data.sort(key=lambda x: x["PeakWL"])
         
-        # Cria a escala de cores
         all_wls = [item["PeakWL"] for item in evolution_data]
         norm = plt.Normalize(min(all_wls), max(all_wls))
         cmap = plt.cm.turbo 
@@ -118,31 +126,31 @@ def compile_and_plot_results(folder_path):
             peak_wl = item["PeakWL"]
             final_fit = item["FinalFitness"]
             
-            # Define cor baseada no WL
             color = cmap(norm(peak_wl))
-            
-            # --- MUDANÇA: Label explícito para a legenda ---
             label_text = f"{peak_wl:.1f} nm"
             
             ax2.plot(generations, history, label=label_text, color=color, linewidth=2, alpha=0.8)
             ax2.scatter(len(history), final_fit, color=color, edgecolors='k', s=50, zorder=4)
 
-        ax2.set_title(f'Evolução do Fitness por Comprimento de Onda', fontsize=14, weight='bold')
+        # Título removido para LaTeX
+        # ax2.set_title(...)
+        
         ax2.set_xlabel('Geração', fontsize=12, weight='bold')
-        ax2.set_ylabel('Melhor Fitness', fontsize=12, weight='bold')
+        ax2.set_ylabel('Melhor Aptidão', fontsize=12, weight='bold')
         
         ax2.grid(True, which='major', linestyle='-', linewidth=0.8, alpha=0.6)
         ax2.grid(True, which='minor', linestyle=':', linewidth=0.5, alpha=0.4)
         ax2.minorticks_on()
         
-        # --- MUDANÇA: Legenda Externa ---
-        # bbox_to_anchor=(1.02, 1) coloca a legenda fora do gráfico, no canto superior direito
         ax2.legend(title="Centro (nm)", title_fontsize='11', fontsize='10', 
                    loc='upper left', bbox_to_anchor=(1.02, 1), borderaxespad=0.)
 
         plt.tight_layout()
-        plt.savefig("compiled_fitness_evolution_legend.png", dpi=300)
-        print("Gráfico 2 salvo: compiled_fitness_evolution_legend.png")
+        
+        # --- MUDANÇA: Salvar dentro da pasta EXPORT_FOLDER ---
+        output_path2 = os.path.join(EXPORT_FOLDER, "compiled_fitness_evolution_legend.pdf")
+        plt.savefig(output_path2, format='pdf', bbox_inches='tight')
+        print(f"Gráfico 2 salvo em: {output_path2}")
         
     plt.show()
 
