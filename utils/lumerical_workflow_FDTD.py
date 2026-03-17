@@ -1,3 +1,4 @@
+#utils/lumerical_workflow_FDTD
 import lumapi
 import os
 import shutil
@@ -73,16 +74,25 @@ def _build_apodized_structure(fdtd, chromosome):
     fdtd.set("z span", height)
     fdtd.set("material", "Si (Silicon) - Palik")
 
+# --- [Trecho de lumerical_workflow_FDTD.py: simulate_generation_lumerical] ---
+
 def simulate_generation_lumerical(fdtd, population, temp_base_path,
-                                  geom_lsf, simu_lsf, temp_dir, mode_type="apodized"):
+                                  geom_lsf, simu_lsf, temp_dir, 
+                                  mode_type="apodized", stop_check=None): # [ADICIONADO stop_check]
     """
-    Simula a geração completa via FDTD usando paralelização runjobs().
+    Simula a geração completa via FDTD usando paralelização runjobs(),
+    com sensibilidade a interrupções.
     """
     fdtd.clearjobs()
     job_files = []
 
-    # 1. Preparação dos arquivos e adição à fila (Fila de Jobs)
+    # 1. Preparação dos arquivos e adição à fila
     for i, chromosome in enumerate(population):
+        # --- [VERIFICAÇÃO DE PARADA] ---
+        if stop_check and stop_check():
+            print(f"\n[FDTD] Parada detectada: Abortando construção do indivíduo {i+1}.")
+            return [], None # Retorna vazio para sinalizar interrupção ao main.py
+        
         file_name = f"indiv_{i+1}_fdtd.fsp"
         file_path = os.path.join(temp_dir, file_name)
         
@@ -93,29 +103,28 @@ def simulate_generation_lumerical(fdtd, population, temp_base_path,
         fdtd.addjob(file_path)
         job_files.append(file_path)
 
-    # 2. Execução Paralela
+    # 2. Execução Paralela (Chamada bloqueante do Lumerical)
     print(f"      [FDTD] Executando simulações paralelas (runjobs)...")
     fdtd.runjobs()
 
     # 3. Coleta dos Espectros
-    all_spectra = [] # Vetores de transmissão que serão passados à fitness
+    all_spectra = []
     frequencies = None
 
     for file_path in job_files:
+        # --- [VERIFICAÇÃO DE PARADA] ---
+        if stop_check and stop_check():
+            print("\n[FDTD] Parada detectada: Interrompendo coleta de resultados.")
+            return [], None
+
         try:
             fdtd.load(file_path)
-            
-            # Coleta o resultado do monitor de transmissão na entrada/saída do guia
-            # Como discutido, o FDTD permite capturar o espectro total (T) [cite: 144, 186, 295]
-            # Assumimos que o arquivo base possui um monitor chamado "monitor_drop"
             res = fdtd.getresult("monitor_drop", "T")
             
             transmission_vector = abs(res['T'].flatten())
             wavelengths = res['lambda'].flatten()
             current_freqs = 299792458.0 / wavelengths
             
-            # Para manter compatibilidade com as fitness functions existentes:
-            # Criamos uma matriz fake onde a posição de transmissão (S21) é o nosso espectro
             S_equiv = np.zeros((2, 2, len(current_freqs)), dtype=np.complex128)
             S_equiv[1, 0, :] = np.sqrt(transmission_vector) 
             

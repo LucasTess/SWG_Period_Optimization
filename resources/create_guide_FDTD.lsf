@@ -1,0 +1,144 @@
+# create_guide_fdtd.lsf
+groupscope("::model");
+deleteall;
+clc;
+clear;
+
+#height = 2.2e-07;
+#Lambda = 3.188527897525252e-07;
+#DC = 0.20290346776334633;
+#w = 4.4717221556523667e-07;
+#w_c = 3.5562447757960685e-07;
+#N = 449;
+
+
+
+#########################################################################################################
+# Cria o grupo do Guia
+addstructuregroup;
+set("name","Guia Metamaterial");
+set("x", 0);
+set("y", 0);
+set("z", 0);
+adduserprop("height", 2, 2.2e-07);
+adduserprop("index", 0, 3.5);
+adduserprop("material", 5, 'Si (Silicon) - Palik');
+
+
+adduserprop("Lambda", 2, 3.2e-07);
+adduserprop("DC", 2,  0.2);
+adduserprop("w", 2, 4.5e-07);
+adduserprop("w_c", 2, 3.5e-07);
+adduserprop("N", 2, 450);
+N = getnamed("Guia Metamaterial", "N");
+delta_s_vector = randmatrix(N, 1) * 1.5e-7;
+#adduserprop("delta_s_vector", 2, rand(N, 1) * 1.5e-7);
+
+total_length = getnamed("Guia Metamaterial", "N")*getnamed("Guia Metamaterial", "Lambda");
+
+# Cria substrato
+addrect;
+set("material", 'SiO2 (Glass) - Palik');
+set("name","Substrato - SiO2");
+set("x",0);
+set("x span", total_length*1.2);
+set("y", 0);
+set("y span", 10e-6);
+set("z", -0.22e-6);
+set("z span", 0.22e-6);
+
+# Cria Agua
+addrect;
+set("material", 'Agua_deion');
+set("name","Agua");
+set("x",0);
+set("x span", total_length*1.2);
+set("y", 0);
+set("y span", 10e-6);
+set("z", 0);
+set("z span", 0.8e-6);
+set("alpha", 0.4);
+
+
+
+# Garante que o grupo está selecionado
+select("Guia Metamaterial");
+# 1. Lê os parâmetros do grupo existente
+height = getnamed("Guia Metamaterial", "height");
+w = getnamed("Guia Metamaterial", "w");
+w_c = getnamed("Guia Metamaterial", "w_c");
+Lambda = getnamed("Guia Metamaterial", "Lambda");
+DC = getnamed("Guia Metamaterial", "DC");
+N = getnamed("Guia Metamaterial", "N");
+#delta_s_vector = getnamed("Guia Metamaterial", "delta_s_vector");
+
+
+if (exist("delta_s_vector")) {
+    ds_vals = delta_s_vector;
+} else {
+    delta_s_ui = getnamed("Guia Metamaterial", "delta_s");
+    ds_vals = matrix(N, 1) + delta_s_ui; 
+} # [NOVO]
+material = getnamed("Guia Metamaterial", "material");
+
+
+# Escreve o script
+# 1. Criação do guia core
+addrect;
+set("x", 0);
+set('x span', N*Lambda);
+set("y", 0);
+set('y span', w_c);
+set("z", 0);
+set('z span', height);
+set("name", "core guide");
+set("material", material);
+substrate_x_max =  N*Lambda / 2; 
+last_x = substrate_x_max;
+start = 0 - (N*Lambda)/2 +(Lambda*DC)/2;
+
+# 2. Loop de Construção dos Segmentos (Dentes Apodizados)
+for(i= 0:1:N-1){
+    if((start + ((i)*Lambda) + (Lambda*DC)/2) <= substrate_x_max){
+        current_ds = ds_vals(i+1);
+        # Dente Superior (Top Tooth) - Deslocado para +delta_s/2
+        addrect;
+        set("name", "tooth_top_" + num2str(i));
+        set("x", start + ((i)*Lambda));
+        set('x span', (Lambda*DC));
+        set("y", 0 + w/4); # <--- Aplicação do deslocamento
+        set('y span', w/2);
+        set("z", -0.11e-6 + height/2);
+        set('z span', height);
+        set("material", material);
+
+        # Dente Inferior (Bottom Tooth) - Deslocado para -delta_s/2
+        addrect;
+        set("name", "tooth_bottom_" + num2str(i));
+        set("x", start + ((i)*Lambda) + current_ds);
+        set('x span', (Lambda*DC));
+        set("y", 0 - w/4); # <--- Aplicação do deslocamento oposto
+        set('y span', w/2);
+        set("z", -0.11e-6 + height/2);
+        set('z span', height);
+        set("material", material);
+    }
+}
+
+# Cria guia anterior
+addrect;
+set("x", start - Lambda/2 - (Lambda*DC)/2);
+set("x span", 2*Lambda/2 );
+set("y", 0); set('y span', w);
+set("z", -0.11e-6 + height/2); set('z span', height);
+set("name", "Guide in");
+set("material", material);
+   
+# Cria guia posterior
+addrect;
+set("x", (N*Lambda)/2 + Lambda/2);
+set("x span", 2*Lambda/2 );
+set("y", 0); set('y span', w);
+set("z", -0.11e-6 + height/2); set('z span', height);
+set("name", "Guide out");
+set("material", material);

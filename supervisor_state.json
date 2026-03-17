@@ -1,20 +1,18 @@
 {
-    "next_index": 2,
-    "timestamp": "2026-03-16T15:44:44.256685",
+    "next_index": 0.1,
+    "timestamp": "2026-03-17T12:48:14.750009",
     "config_base": {
         "file_paths": {
-            "original_lms_file_name": "SWG_period_EME.lms",
+            "original_lms_file_name": "bragg_guide_EME.lms",
             "geometry_lsf_script_name": "create_guide_EME.lsf",
             "simulation_lsf_script_name": "run_simu_guide_EME.lsf",
             "simulation_results_directory_name": "simulation_results"
         },
         "ga_params": {
-            "population_size": 3,
+            "population_size": 2,
             "mutation_rate": 0.2,
-            "num_generations": 3,
-            "enable_convergence_check": true,
-            "convergence_patience_ratio": 0.2,
-            "min_convergence_patience": 20
+            "num_generations": 2,
+            "enable_convergence_check": true
         },
         "ga_ranges": {
             "Lambda_range": [
@@ -29,12 +27,28 @@
                 4e-07,
                 6e-07
             ],
+            "w_c_range": [
+                5e-08,
+                2.5e-07
+            ],
             "N_range": [
                 2.0,
                 500.0
             ],
+            "mode": "apodized",
             "w_c_range_max_ratio": 0.8,
-            "mode": "uniform"
+            "delta_s_max_range": [
+                1e-08,
+                1.5e-07
+            ],
+            "P_range": [
+                1.0,
+                10.0
+            ],
+            "M_range": [
+                1.0,
+                5.0
+            ]
         },
         "fitness_params": {
             "strategy_name": "reflection_band",
@@ -50,13 +64,18 @@
         },
         "run_settings": {
             "clean_temp_files": true,
-            "lumerical_hide_ui": true
+            "lumerical_hide_ui": false
         }
     },
     "sweep_params": {
         "enabled": true,
         "start": 1450.0,
         "stop": 1550.0,
-        "steps": 4
+        "steps": 1,
+        "bw_retries": [
+            5.0,
+            10.0,
+            20.0
+        ]
     }
 }

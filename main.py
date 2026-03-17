@@ -125,7 +125,7 @@ def run_optimization(config: dict, stop_check=None):
             all_S_matrices, frequencies = simulate_func(
                 mode_session, current_population, _temp_base_path,
                 _geometry_lsf_script_path, _simulation_lsf_script_path,
-                _temp_directory, mode_type=ga_r['mode']
+                _temp_directory, mode_type=ga_r['mode'], stop_check=stop_check
             )
             
             # Cálculo de Fitness
@@ -140,6 +140,10 @@ def run_optimization(config: dict, stop_check=None):
             pop_before = copy.deepcopy(current_population)
             scores_before = copy.deepcopy(fitness_scores)
             current_population = optimizer.evolve(scores_before)
+
+            # --- [FIX] Filtramos ga_r para passar apenas o que o recorder espera ---
+            # O recorder espera apenas os nomes das chaves que terminam com '_range'
+            clean_ranges = {k: v for k, v in ga_r.items() if k.endswith('_range')}
             
             record_experiment_results(
                 output_directory=_simulation_results_directory,
@@ -151,7 +155,7 @@ def run_optimization(config: dict, stop_check=None):
                 current_population=pop_before,
                 fitness_scores_for_gen=scores_before,
                 real_peak_wl_nm=0.0, real_bw_hz=0.0,
-                **ga_r,
+                **clean_ranges, # Passa apenas os ranges filtrados
                 fitness_strategy_name=fit_p['strategy_name'],
                 center_wl_nm=fit_p['center_wl_nm'], bandwidth_nm=fit_p['bandwidth_nm'],
                 transition_bw_nm=fit_p['transition_bw_nm'],

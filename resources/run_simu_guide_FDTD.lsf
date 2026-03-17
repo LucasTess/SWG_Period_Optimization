@@ -1,0 +1,45 @@
+# run_simu_guide_FDTD.lsf 
+
+
+height = getnamed("Guia Metamaterial", "height");
+Lambda = getnamed("Guia Metamaterial", "Lambda");
+DC = getnamed("Guia Metamaterial", "DC");
+w = getnamed("Guia Metamaterial", "w");
+w_c = getnamed("Guia Metamaterial", "w_c");
+N = getnamed("Guia Metamaterial", "N");
+
+# Recalculando posição final para os monitores e portas
+substrate_x_max = (N*Lambda) / 2; 
+start = 0 - total_length/2 + (DC*Lambda)/2;
+for(i= 0:1:N){
+    if((start + ((i)*Lambda) + (DC*Lambda)/2) <= substrate_x_max){
+        num_segments_guide_real = i;        
+        last_x = start + i*Lambda;                 
+        }
+    }
+
+sim_time = 1000e-15;
+points = 500;
+mesh_accuracy = 2;
+addfdtd;
+set("dimension",2);
+set("simulation time", sim_time);
+set("x",0);
+set("x span", (N*Lambda)*1.1);
+set("y",0);
+set("y span",w*3);
+set("z", 0);
+set("z span", max([height*4; 1e-6]));
+set("background material", 'Agua_deion');
+
+# Monitor drop
+addpower;
+set("name", "monitor_drop"); # Nome crucial para o Python (fdtd.getresult)
+set("monitor type", "2D X-normal"); # Monitor vertical (plano YZ)
+# Posicionado logo após o fim da grade (no meio do 'Guide out')
+set("x", start - Lambda/2 - (Lambda*DC)/2);
+set("y", 0);
+set("y span", w * 1.2);
+set("z", 0);
+set("z span", height * 1.2);
+

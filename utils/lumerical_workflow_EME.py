@@ -1,4 +1,4 @@
-# utils/lumerical_workflow.py (MODIFICADO PARA EME e N variável)
+# utils/lumerical_workflow_EME.py 
 
 import lumapi
 import os
@@ -92,20 +92,30 @@ def _create_and_run_eme(mode, chromosome, lms_path, construction_lsf_path, simul
         print(f"!!! Erro durante a modificação/execução de {os.path.basename(lms_path)}: {e}")
         return None, None
     
+# utils/lumerical_workflow_EME.py 
+
 def simulate_generation_lumerical(mode_session, current_population, lms_base_path,
                                   geometry_lsf_path, 
-                                  simulation_lsf_path, temp_directory):
+                                  simulation_lsf_path, temp_directory, 
+                                  mode_type="Uniform", stop_check=None): # [ADICIONADO stop_check]
     """
-    Executa UMA simulação EME para cada cromossomo na população.
+    Executa UMA simulação EME para cada cromossomo na população, 
+    verificando solicitações de parada entre os indivíduos.
     """
     all_S_matrices = []
     frequencies = None
     
     for chrom_id, chromosome in enumerate(current_population):
+        # --- [VERIFICAÇÃO DE PARADA] ---
+        # Se o supervisor sinalizou STOP, interrompemos o processamento da geração
+        if stop_check and stop_check():
+            print(f"\n--- Parada detectada: Interrompendo simulação da geração no cromossomo {chrom_id + 1}. ---")
+            break
+        # ------------------------------
+
         print(f"\n--- Processando Cromossomo {chrom_id + 1}/{len(current_population)} ---")
         
         lms_main_path = os.path.join(temp_directory, f"chrom_{chrom_id+1}_eme.lms")
-
         shutil.copy(lms_base_path, lms_main_path)
 
         print(f"  - Modificando e executando {os.path.basename(lms_main_path)}...")
