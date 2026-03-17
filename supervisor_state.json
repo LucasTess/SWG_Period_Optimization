@@ -1,175 +1,62 @@
 {
-    "start_index": 11,
-    "all_experiment_results": [
-        {
-            "target_wavelength_nm": 1450.0,
-            "attempted_bandwidth_nm": 5,
-            "best_fitness_achieved": 0.9313825239136084,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1450.0nm_5nm_20251118_173805_full_data.csv",
-            "status": "Success"
+    "next_index": 2,
+    "timestamp": "2026-03-16T15:44:44.256685",
+    "config_base": {
+        "file_paths": {
+            "original_lms_file_name": "SWG_period_EME.lms",
+            "geometry_lsf_script_name": "create_guide_EME.lsf",
+            "simulation_lsf_script_name": "run_simu_guide_EME.lsf",
+            "simulation_results_directory_name": "simulation_results"
         },
-        {
-            "target_wavelength_nm": 1460.0,
-            "attempted_bandwidth_nm": 5,
-            "best_fitness_achieved": 0.8906354770662058,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1460.0nm_5nm_20251119_034931_full_data.csv",
-            "status": "Success"
+        "ga_params": {
+            "population_size": 3,
+            "mutation_rate": 0.2,
+            "num_generations": 3,
+            "enable_convergence_check": true,
+            "convergence_patience_ratio": 0.2,
+            "min_convergence_patience": 20
         },
-        {
-            "target_wavelength_nm": 1470.0,
-            "attempted_bandwidth_nm": 5,
-            "best_fitness_achieved": 0.8825832388773305,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1470.0nm_5nm_20251124_105618_full_data.csv",
-            "status": "Success"
+        "ga_ranges": {
+            "Lambda_range": [
+                2e-07,
+                4e-07
+            ],
+            "DC_range": [
+                0.1,
+                0.9
+            ],
+            "w_range": [
+                4e-07,
+                6e-07
+            ],
+            "N_range": [
+                2.0,
+                500.0
+            ],
+            "w_c_range_max_ratio": 0.8,
+            "mode": "uniform"
         },
-        {
-            "target_wavelength_nm": 1480.0,
-            "attempted_bandwidth_nm": 20,
-            "best_fitness_achieved": 0.8481750822087168,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1480.0nm_20nm_20251125_235737_full_data.csv",
-            "status": "Success"
+        "fitness_params": {
+            "strategy_name": "reflection_band",
+            "cutoff_wl_nm": 1550,
+            "center_wl_nm": 1550,
+            "bandwidth_nm": 5,
+            "transition_bw_nm": 20,
+            "weights": {
+                "rejection": 0.5,
+                "passband": 0.2,
+                "transition": 0.3
+            }
         },
-        {
-            "target_wavelength_nm": 1490.0,
-            "attempted_bandwidth_nm": 10,
-            "best_fitness_achieved": 0.8893320304904553,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1490.0nm_10nm_20251126_215838_full_data.csv",
-            "status": "Success"
-        },
-        {
-            "target_wavelength_nm": 1500.0,
-            "attempted_bandwidth_nm": 5,
-            "best_fitness_achieved": 0.9326655540961903,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1500.0nm_5nm_20251127_074751_full_data.csv",
-            "status": "Success"
-        },
-        {
-            "target_wavelength_nm": 1510.0,
-            "attempted_bandwidth_nm": 10,
-            "best_fitness_achieved": 0.9065843850731965,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1510.0nm_10nm_20251128_035117_full_data.csv",
-            "status": "Success"
-        },
-        {
-            "target_wavelength_nm": 1520.0,
-            "attempted_bandwidth_nm": 10,
-            "best_fitness_achieved": 0.8078092557905596,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1520.0nm_10nm_20251129_052004_full_data.csv",
-            "status": "Success"
-        },
-        {
-            "target_wavelength_nm": 1530.0,
-            "attempted_bandwidth_nm": 5,
-            "best_fitness_achieved": 0.9431875901217958,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1530.0nm_5nm_20251129_185316_full_data.csv",
-            "status": "Success"
-        },
-        {
-            "target_wavelength_nm": 1540.0,
-            "attempted_bandwidth_nm": 5,
-            "best_fitness_achieved": 0.7426004484197172,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1540.0nm_5nm_20251130_065940_full_data.csv",
-            "status": "Fail"
-        },
-        {
-            "target_wavelength_nm": 1540.0,
-            "attempted_bandwidth_nm": 10,
-            "best_fitness_achieved": 0.9001114714506862,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1540.0nm_10nm_20251205_214856_full_data.csv",
-            "status": "Success"
-        },
-        {
-            "target_wavelength_nm": 1550.0,
-            "attempted_bandwidth_nm": 20,
-            "best_fitness_achieved": 0.775006758314805,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1550.0nm_20nm_20251209_163554_full_data.csv",
-            "status": "Success"
+        "run_settings": {
+            "clean_temp_files": true,
+            "lumerical_hide_ui": true
         }
-    ],
-    "all_results": [
-        {
-            "target_wavelength_nm": 1450.0,
-            "attempted_bandwidth_nm": 5,
-            "best_fitness_achieved": 0.9313825239136084,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1450.0nm_5nm_20251118_173805_full_data.csv",
-            "status": "Success"
-        },
-        {
-            "target_wavelength_nm": 1460.0,
-            "attempted_bandwidth_nm": 5,
-            "best_fitness_achieved": 0.8906354770662058,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1460.0nm_5nm_20251119_034931_full_data.csv",
-            "status": "Success"
-        },
-        {
-            "target_wavelength_nm": 1470.0,
-            "attempted_bandwidth_nm": 5,
-            "best_fitness_achieved": 0.8825832388773305,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1470.0nm_5nm_20251124_105618_full_data.csv",
-            "status": "Success"
-        },
-        {
-            "target_wavelength_nm": 1480.0,
-            "attempted_bandwidth_nm": 20,
-            "best_fitness_achieved": 0.8481750822087168,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1480.0nm_20nm_20251125_235737_full_data.csv",
-            "status": "Success"
-        },
-        {
-            "target_wavelength_nm": 1490.0,
-            "attempted_bandwidth_nm": 10,
-            "best_fitness_achieved": 0.8893320304904553,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1490.0nm_10nm_20251126_215838_full_data.csv",
-            "status": "Success"
-        },
-        {
-            "target_wavelength_nm": 1500.0,
-            "attempted_bandwidth_nm": 5,
-            "best_fitness_achieved": 0.9326655540961903,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1500.0nm_5nm_20251127_074751_full_data.csv",
-            "status": "Success"
-        },
-        {
-            "target_wavelength_nm": 1510.0,
-            "attempted_bandwidth_nm": 10,
-            "best_fitness_achieved": 0.9065843850731965,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1510.0nm_10nm_20251128_035117_full_data.csv",
-            "status": "Success"
-        },
-        {
-            "target_wavelength_nm": 1520.0,
-            "attempted_bandwidth_nm": 10,
-            "best_fitness_achieved": 0.8078092557905596,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1520.0nm_10nm_20251129_052004_full_data.csv",
-            "status": "Success"
-        },
-        {
-            "target_wavelength_nm": 1530.0,
-            "attempted_bandwidth_nm": 5,
-            "best_fitness_achieved": 0.9431875901217958,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1530.0nm_5nm_20251129_185316_full_data.csv",
-            "status": "Success"
-        },
-        {
-            "target_wavelength_nm": 1540.0,
-            "attempted_bandwidth_nm": 5,
-            "best_fitness_achieved": 0.7426004484197172,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1540.0nm_5nm_20251130_065940_full_data.csv",
-            "status": "Fail"
-        },
-        {
-            "target_wavelength_nm": 1540.0,
-            "attempted_bandwidth_nm": 10,
-            "best_fitness_achieved": 0.9001114714506862,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1540.0nm_10nm_20251205_214856_full_data.csv",
-            "status": "Success"
-        },
-        {
-            "target_wavelength_nm": 1550.0,
-            "attempted_bandwidth_nm": 20,
-            "best_fitness_achieved": 0.775006758314805,
-            "results_csv_path": "C:\\Users\\User04\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1550.0nm_20nm_20251209_163554_full_data.csv",
-            "status": "Success"
-        }
-    ]
+    },
+    "sweep_params": {
+        "enabled": true,
+        "start": 1450.0,
+        "stop": 1550.0,
+        "steps": 4
+    }
 }
