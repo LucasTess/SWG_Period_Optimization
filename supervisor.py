@@ -23,9 +23,14 @@ STATE_FILE = "supervisor_state.json"
 # --- CONFIGURAÇÃO PADRÃO ---
 DEFAULT_CONFIG = {
     "file_paths": {
-        "original_lms_file_name": "bragg_guide_EME.lms",
-        "geometry_lsf_script_name": "create_guide_EME.lsf",
-        "simulation_lsf_script_name": "run_simu_guide_EME.lsf",
+        "original_uniform_lms_file_name": "bragg_guide_EME.lms",
+        "geometry_uniform_lsf_script_name": "create_guide_EME.lsf",
+        "simulation_uniform_lsf_script_name": "run_simu_guide_EME.lsf",
+
+        "original_apodized_lms_file_name": "bragg_guide_FDTD.fsp",
+        "geometry_apodized_lsf_script_name": "create_guide_FDTD.lsf",
+        "simulation_apodized_lsf_script_name": "run_simu_guide_FDTD.lsf",
+
         "simulation_results_directory_name": "simulation_results"
     },
     "ga_params": {}, 
@@ -235,26 +240,52 @@ class BraggSupervisorUI(QMainWindow):
             self.edit_m = QLineEdit("1, 5"); self.range_form.addRow("Decay Factor (M):", self.edit_m)
 
     def collect_config(self):
-        def parse(txt): return tuple(map(float, txt.replace(" ", "").split(',')))
-        cfg = copy.deepcopy(DEFAULT_CONFIG)
-        cfg['ga_params'].update({"population_size": self.pop_size.value(), "mutation_rate": self.mut_rate.value(), "num_generations": self.num_gen.value(), "enable_convergence_check": self.conv_check.isChecked()})
-        
-        # DICIONÁRIO DE RANGES CORRIGIDO
-        ranges = {
-            "Lambda_range": parse(self.edit_lambda.text()), 
-            "DC_range": parse(self.edit_dc.text()), # RESTAURADO
-            "w_range": parse(self.edit_w.text()), 
-            "w_c_range": parse(self.edit_wc.text()), 
-            "N_range": parse(self.edit_n.text()), 
-            "mode": "apodized" if self.rad_apodized.isChecked() else "uniform",
-            "w_c_range_max_ratio": 0.8
-        }
-        
-        if self.rad_apodized.isChecked():
-            ranges.update({"delta_s_max_range": parse(self.edit_ds.text()), "P_range": parse(self.edit_p.text()), "M_range": parse(self.edit_m.text())})
-        
-        cfg["ga_ranges"] = ranges
-        return cfg
+            def parse(txt): return tuple(map(float, txt.replace(" ", "").split(',')))
+            cfg = copy.deepcopy(DEFAULT_CONFIG)
+            
+            # 1. Identifica o modo selecionado
+            is_apodized = self.rad_apodized.isChecked()
+            mode_str = "apodized" if is_apodized else "uniform"
+            
+            # 2. MAPEAMENTO DINÂMICO DE ARQUIVOS
+            # Substitui as chaves genéricas pelos valores específicos do modo atual
+            fp = cfg["file_paths"]
+            if is_apodized:
+                fp["original_lms_file_name"] = fp["original_apodized_lms_file_name"]
+                fp["geometry_lsf_script_name"] = fp["geometry_apodized_lsf_script_name"]
+                fp["simulation_lsf_script_name"] = fp["simulation_apodized_lsf_script_name"]
+            else:
+                fp["original_lms_file_name"] = fp["original_uniform_lms_file_name"]
+                fp["geometry_lsf_script_name"] = fp["geometry_uniform_lsf_script_name"]
+                fp["simulation_lsf_script_name"] = fp["simulation_uniform_lsf_script_name"]
+
+            # 3. Atualiza GA Params e Ranges (Mantendo o DC_range restaurado)
+            cfg['ga_params'].update({
+                "population_size": self.pop_size.value(), 
+                "mutation_rate": self.mut_rate.value(), 
+                "num_generations": self.num_gen.value(), 
+                "enable_convergence_check": self.conv_check.isChecked()
+            })
+            
+            ranges = {
+                "Lambda_range": parse(self.edit_lambda.text()), 
+                "DC_range": parse(self.edit_dc.text()), 
+                "w_range": parse(self.edit_w.text()), 
+                "w_c_range": parse(self.edit_wc.text()), 
+                "N_range": parse(self.edit_n.text()), 
+                "mode": mode_str,
+                "w_c_range_max_ratio": 0.8
+            }
+            
+            if is_apodized:
+                ranges.update({
+                    "delta_s_max_range": parse(self.edit_ds.text()), 
+                    "P_range": parse(self.edit_p.text()), 
+                    "M_range": parse(self.edit_m.text())
+                })
+            
+            cfg["ga_ranges"] = ranges
+            return cfg
 
     def start_opt(self, restart=True):
         start_idx = 0.0

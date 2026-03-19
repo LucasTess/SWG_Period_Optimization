@@ -31,10 +31,33 @@ adduserprop("w", 2, 4.5e-07);
 adduserprop("w_c", 2, 3.5e-07);
 adduserprop("N", 2, 450);
 N = getnamed("Guia Metamaterial", "N");
-delta_s_vector = randmatrix(N, 1) * 1.5e-7;
-#adduserprop("delta_s_vector", 2, rand(N, 1) * 1.5e-7);
+# [NOVAS PROPRIEDADES] Enviadas pelo AG do Python
+adduserprop("delta_s_max", 2, 0.1e-6); 
+adduserprop("P", 2, 2); 
+adduserprop("M", 2, 3);
 
-total_length = getnamed("Guia Metamaterial", "N")*getnamed("Guia Metamaterial", "Lambda");
+select("Guia Metamaterial");
+height      = getnamed("Guia Metamaterial", "height");
+w           = getnamed("Guia Metamaterial", "w");
+w_c         = getnamed("Guia Metamaterial", "w_c");
+Lambda      = getnamed("Guia Metamaterial", "Lambda");
+DC          = getnamed("Guia Metamaterial", "DC");
+N           = getnamed("Guia Metamaterial", "N");
+ds_max      = getnamed("Guia Metamaterial", "delta_s_max");
+P_val       = getnamed("Guia Metamaterial", "P");
+M_val       = getnamed("Guia Metamaterial", "M");
+material    = getnamed("Guia Metamaterial", "material");
+
+
+total_length = N * Lambda;
+
+# --- [CÁLCULO INTERNO DO VETOR DE DESLOCAMENTO] ---
+ds_vals = matrix(N, 1);
+for(n=1:N) {
+    # n varia de 1 a N
+    x_norm = abs((2.0 * n - N) / N);
+    ds_vals(n) = ds_max * (1.0 - x_norm^P_val)^M_val;
+}
 
 # Cria substrato
 addrect;
@@ -59,31 +82,7 @@ set("z", 0);
 set("z span", 0.8e-6);
 set("alpha", 0.4);
 
-
-
-# Garante que o grupo está selecionado
-select("Guia Metamaterial");
-# 1. Lê os parâmetros do grupo existente
-height = getnamed("Guia Metamaterial", "height");
-w = getnamed("Guia Metamaterial", "w");
-w_c = getnamed("Guia Metamaterial", "w_c");
-Lambda = getnamed("Guia Metamaterial", "Lambda");
-DC = getnamed("Guia Metamaterial", "DC");
-N = getnamed("Guia Metamaterial", "N");
-#delta_s_vector = getnamed("Guia Metamaterial", "delta_s_vector");
-
-
-if (exist("delta_s_vector")) {
-    ds_vals = delta_s_vector;
-} else {
-    delta_s_ui = getnamed("Guia Metamaterial", "delta_s");
-    ds_vals = matrix(N, 1) + delta_s_ui; 
-} # [NOVO]
-material = getnamed("Guia Metamaterial", "material");
-
-
-# Escreve o script
-# 1. Criação do guia core
+#  Criação do guia core
 addrect;
 set("x", 0);
 set('x span', N*Lambda);
@@ -96,6 +95,25 @@ set("material", material);
 substrate_x_max =  N*Lambda / 2; 
 last_x = substrate_x_max;
 start = 0 - (N*Lambda)/2 +(Lambda*DC)/2;
+
+# Cria guia anterior
+addrect;
+set("x", start - Lambda/2 - (Lambda*DC)/2);
+set("x span", 2*Lambda/2 );
+set("y", 0); set('y span', w);
+set("z", -0.11e-6 + height/2); set('z span', height);
+set("name", "Guide in");
+set("material", material);
+   
+# Cria guia posterior
+addrect;
+set("x", (N*Lambda)/2 + Lambda/2);
+set("x span", 2*Lambda/2 );
+set("y", 0); set('y span', w);
+set("z", -0.11e-6 + height/2); set('z span', height);
+set("name", "Guide out");
+set("material", material);
+
 
 # 2. Loop de Construção dos Segmentos (Dentes Apodizados)
 for(i= 0:1:N-1){
@@ -125,20 +143,3 @@ for(i= 0:1:N-1){
     }
 }
 
-# Cria guia anterior
-addrect;
-set("x", start - Lambda/2 - (Lambda*DC)/2);
-set("x span", 2*Lambda/2 );
-set("y", 0); set('y span', w);
-set("z", -0.11e-6 + height/2); set('z span', height);
-set("name", "Guide in");
-set("material", material);
-   
-# Cria guia posterior
-addrect;
-set("x", (N*Lambda)/2 + Lambda/2);
-set("x span", 2*Lambda/2 );
-set("y", 0); set('y span', w);
-set("z", -0.11e-6 + height/2); set('z span', height);
-set("name", "Guide out");
-set("material", material);

@@ -10,6 +10,7 @@ N = getnamed("Guia Metamaterial", "N");
 
 # Recalculando posição final para os monitores e portas
 substrate_x_max = (N*Lambda) / 2; 
+total_length = N * Lambda;
 start = 0 - total_length/2 + (DC*Lambda)/2;
 for(i= 0:1:N){
     if((start + ((i)*Lambda) + (DC*Lambda)/2) <= substrate_x_max){
@@ -27,19 +28,90 @@ set("simulation time", sim_time);
 set("x",0);
 set("x span", (N*Lambda)*1.1);
 set("y",0);
-set("y span",w*3);
+set("y span",w*5.5);
 set("z", 0);
 set("z span", max([height*4; 1e-6]));
 set("background material", 'Agua_deion');
+set("mesh accuracy", mesh_accuracy);
 
-# Monitor drop
-addpower;
-set("name", "monitor_drop"); # Nome crucial para o Python (fdtd.getresult)
-set("monitor type", "2D X-normal"); # Monitor vertical (plano YZ)
-# Posicionado logo após o fim da grade (no meio do 'Guide out')
-set("x", start - Lambda/2 - (Lambda*DC)/2);
-set("y", 0);
+
+#addmesh;
+#set("name", "mesh_grating");
+#set("x", 0);
+#set("x span", (N*Lambda)*1.05);
+#set("y", 0);
+#set("y span", w*1.5);
+#set("z", 0);
+#set("z span", height*1.5);
+
+ ##defina um passo de malha fixo (ex: 20nm) para evitar que o meshing trave
+#set("enabled", 1);
+#set("set maximum mesh step", 1);
+#set("dx", 0.02e-6); 
+#set("dy", 0.02e-6);
+#set("dz", 0.02e-6);
+
+
+setglobalsource("wavelength start", 1.45e-6);
+setglobalsource("wavelength stop", 1.62e-6);
+setglobalsource("optimize for short pulse", 0);
+
+amplitude = 3;
+# A porta 1 atuará como Fonte e como Monitor de Reflexão (S11)
+addport;
+set("name", "port_1");
+set("injection axis", "x-axis");
+set("amplitude", amplitude);
+set("direction", "Forward");
+set("x", start - Lambda/2);
+set("y", 0); 
 set("y span", w * 1.2);
-set("z", 0);
-set("z span", height * 1.2);
+set("z", 0); set("z span", height * 2);
+# A porta 2 atuará como Monitor de Transmissão (S21)
+addport;
+set("name", "port_2");
+set("injection axis", "x-axis");
+set("amplitude", amplitude);
+set("direction", "Backward");
+set("x", (N*Lambda)/2 + Lambda/2);
+set("y", 0); 
+set("y span", w * 1.2);
+set("z", 0); set("z span", height * 2);
+# Garante que a Porta 1 é a fonte ativa
+setnamed("FDTD::ports", "source port", "port_1");
+
+
+
+## --- PORT 1 (Entrada / In) ---
+#addport;
+#set("name", "port 1");
+#set("amplitude", amplitude);
+#set("direction", "forward"); # Injeta para a direita (+x)
+#set("x", start - Lambda);
+#set("y", 0); set("y span", w * 1.2);
+#set("z", 0); set("z span", height * 1.2);
+## Seleciona o modo TE0 automaticamente
+#set("mode selection", "fundamental mode");
+
+## --- PORT 2 (Saída / Through) ---
+#addport;
+#set("name", "port 2");
+#set("amplitude", amplitude);
+#set("direction", "backward"); # Recebe luz vinda da esquerda (-x)
+#set("x", (N*Lambda)/2 + Lambda);
+#set("y", 0); set("y span", w * 3);
+#set("z", 0); set("z span", height * 3);
+#set("mode selection", "fundamental mode");
+
+setnamed("FDTD::ports", "monitor frequency points", points);
+setglobalmonitor("frequency points", points);
+
+
+## Monitor drop
+#addprofile ;
+#set("name", "monitor_drop"); # Nome crucial para o Python (fdtd.getresult)
+#set("monitor type",1);
+#set("x", start - Lambda/2 - (Lambda*DC)/2);
+#set("y", 0);
+#set("z", 0);
 

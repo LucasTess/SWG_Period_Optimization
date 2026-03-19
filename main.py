@@ -46,14 +46,15 @@ def run_optimization(config: dict, stop_check=None):
 
     # --- Seleção Dinâmica do Arquivo Base e Solver ---
     if ga_r['mode'] == "apodized":
-        file_name = "bragg_guide_FDTD.fsp"
         solver_type = "FDTD"
         simulate_func = simulate_FDTD
     else:
-        file_name = "bragg_guide_EME.lms"
         solver_type = "EME"
         simulate_func = simulate_EME
 
+    # --- 2. MAPEAMENTO DE CAMINHOS (Nova Dinâmica) ---
+    # Usamos os nomes genéricos mapeados pelo Supervisor
+    file_name = fp['original_lms_file_name']
     _original_file_path = os.path.join(_project_directory, file_name)
     _extension = os.path.splitext(file_name)[1]
     _temp_base_path = os.path.join(_temp_directory, f"guide_temp_base{_extension}")
@@ -121,7 +122,7 @@ def run_optimization(config: dict, stop_check=None):
             generations_processed += 1
             print(f"\n--- Geração {generations_processed}/{ga_p['num_generations']} ---")
             
-            # Chama o workflow correspondente (EME Serial ou FDTD Parallel)
+            # Chama o workflow (EME ou FDTD)
             all_S_matrices, frequencies = simulate_func(
                 mode_session, current_population, _temp_base_path,
                 _geometry_lsf_script_path, _simulation_lsf_script_path,
