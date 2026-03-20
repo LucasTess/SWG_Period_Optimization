@@ -235,10 +235,11 @@ class BraggSupervisorUI(QMainWindow):
         self.edit_n = QLineEdit("2, 500"); self.range_form.addRow("N Periods Range:", self.edit_n)
         
         if self.rad_apodized.isChecked():
-            self.edit_ds = QLineEdit("0.01e-6, 0.15e-6"); self.range_form.addRow("Max Delta_s:", self.edit_ds)
-            self.edit_p = QLineEdit("1, 10"); self.range_form.addRow("Shape Factor (P):", self.edit_p)
-            self.edit_m = QLineEdit("1, 5"); self.range_form.addRow("Decay Factor (M):", self.edit_m)
-
+            self.edit_h = QLineEdit("1, 15"); self.range_form.addRow("Harmonics (H):", self.edit_h)
+            self.edit_alpha = QLineEdit("0.1, 3.0"); self.range_form.addRow("Decay (alpha):", self.edit_alpha)
+            self.edit_beta = QLineEdit("-3.14, 3.14"); self.range_form.addRow("Phase/Sym (beta):", self.edit_beta)
+            self.edit_s = QLineEdit("0, 8"); self.range_form.addRow("Discretization (S):", self.edit_s)
+    
     def collect_config(self):
             def parse(txt): return tuple(map(float, txt.replace(" ", "").split(',')))
             cfg = copy.deepcopy(DEFAULT_CONFIG)
@@ -279,9 +280,10 @@ class BraggSupervisorUI(QMainWindow):
             
             if is_apodized:
                 ranges.update({
-                    "delta_s_max_range": parse(self.edit_ds.text()), 
-                    "P_range": parse(self.edit_p.text()), 
-                    "M_range": parse(self.edit_m.text())
+                    "H_range": parse(self.edit_h.text()), 
+                    "alpha_range": parse(self.edit_alpha.text()), 
+                    "beta_range": parse(self.edit_beta.text()),
+                    "S_range": parse(self.edit_s.text())
                 })
             
             cfg["ga_ranges"] = ranges

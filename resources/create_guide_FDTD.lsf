@@ -23,18 +23,16 @@ set("z", 0);
 adduserprop("height", 2, 2.2e-07);
 adduserprop("index", 0, 3.5);
 adduserprop("material", 5, 'Si (Silicon) - Palik');
-
-
 adduserprop("Lambda", 2, 3.2e-07);
 adduserprop("DC", 2,  0.2);
 adduserprop("w", 2, 4.5e-07);
 adduserprop("w_c", 2, 3.5e-07);
 adduserprop("N", 2, 450);
-N = getnamed("Guia Metamaterial", "N");
-# [NOVAS PROPRIEDADES] Enviadas pelo AG do Python
-adduserprop("delta_s_max", 2, 0.1e-6); 
-adduserprop("P", 2, 2); 
-adduserprop("M", 2, 3);
+adduserprop("H", 2,  1);
+adduserprop("alpha_param", 2, 1);
+adduserprop("beta", 2, 1.57);
+adduserprop("S", 2, 3);
+
 
 select("Guia Metamaterial");
 height      = getnamed("Guia Metamaterial", "height");
@@ -43,21 +41,72 @@ w_c         = getnamed("Guia Metamaterial", "w_c");
 Lambda      = getnamed("Guia Metamaterial", "Lambda");
 DC          = getnamed("Guia Metamaterial", "DC");
 N           = getnamed("Guia Metamaterial", "N");
-ds_max      = getnamed("Guia Metamaterial", "delta_s_max");
-P_val       = getnamed("Guia Metamaterial", "P");
-M_val       = getnamed("Guia Metamaterial", "M");
+# ds_max      = getnamed("Guia Metamaterial", "delta_s_max");
+# P_val       = getnamed("Guia Metamaterial", "P");
+# M_val       = getnamed("Guia Metamaterial", "M");
 material    = getnamed("Guia Metamaterial", "material");
+
+# Novos Genes do Gerador de Fourier
+H = round(getnamed("Guia Metamaterial", "H")); # Garante que H é inteiro
+alpha_param = getnamed("Guia Metamaterial", "alpha_param"); 
+beta = getnamed("Guia Metamaterial", "beta");
+S = round(getnamed("Guia Metamaterial", "S"));
+
+# ======================================================================
+# 2. RESTRIÇÃO FÍSICA E CÁLCULO DO PERFIL ESPECTRAL
+# ======================================================================
+# O deslocamento máximo é travado pela dimensão física do bloco SWG
+ds_max = Lambda * DC;
+
+y_raw = matrix(N, 1);
+y_norm = matrix(N, 1);
+delta_s_vector = matrix(N, 1);
+
+# Passo A: Soma da Série de Fourier
+for(n=1:N) {
+    x = (2.0 * n - N) / N; # Normaliza a posição x entre -1 e 1
+    sum_val = 0;
+    
+    for(k=1:H) {
+        # Amplitudes baseadas em alpha e beta
+        Ak = sin(k * beta) / (k^alpha_param);
+        sum_val = sum_val + Ak * cos(k * pi * x / 2.0);
+    }
+    y_raw(n) = sum_val;
+}
+
+# Passo B: Normalização Min-Max para o intervalo [0, 1]
+y_min = min(y_raw);
+y_max = max(y_raw);
+
+for(n=1:N) {
+    if (y_max > y_min) {
+        val_norm = (y_raw(n) - y_min) / (y_max - y_min);
+    } else {
+        val_norm = 1; # Previne divisão por zero se a curva for plana
+    }
+    
+    # Passo C: Operador de Discretização (Degraus de Fabricação)
+    if (S > 1) {
+        levels = S - 1;
+        val_norm = round(val_norm * levels) / levels;
+    }
+    
+    # Passo D: Escalonamento final para nanômetros/micrômetros
+    delta_s_vector(n) = val_norm * ds_max;
+}
+
 
 
 total_length = N * Lambda;
 
-# --- [CÁLCULO INTERNO DO VETOR DE DESLOCAMENTO] ---
-ds_vals = matrix(N, 1);
-for(n=1:N) {
-    # n varia de 1 a N
-    x_norm = abs((2.0 * n - N) / N);
-    ds_vals(n) = ds_max * (1.0 - x_norm^P_val)^M_val;
-}
+## --- [CÁLCULO INTERNO DO VETOR DE DESLOCAMENTO] ---
+#ds_vals = matrix(N, 1);
+#for(n=1:N) {
+    ## n varia de 1 a N
+    #x_norm = abs((2.0 * n - N) / N);
+    #ds_vals(n) = ds_max * (1.0 - x_norm^P_val)^M_val;
+#}
 
 # Cria substrato
 addrect;
@@ -118,7 +167,7 @@ set("material", material);
 # 2. Loop de Construção dos Segmentos (Dentes Apodizados)
 for(i= 0:1:N-1){
     if((start + ((i)*Lambda) + (Lambda*DC)/2) <= substrate_x_max){
-        current_ds = ds_vals(i+1);
+        current_ds = delta_s_vector(i+1);
         # Dente Superior (Top Tooth) - Deslocado para +delta_s/2
         addrect;
         set("name", "tooth_top_" + num2str(i));

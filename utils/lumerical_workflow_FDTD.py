@@ -30,11 +30,14 @@ def simulate_generation_lumerical(fdtd, population, temp_base_path,
         
         fdtd.load(temp_base_path)
         fdtd.switchtolayout()
+        # --- [NOVOS GENES: Gerador Espectral de Fourier] ---
         # Injeta os parâmetros diretamente nas propriedades do Structure Group
-        # O script LSF ('geom_script') usará P, M e delta_s_max para desenhar os dentes
-        fdtd.setnamed("Guia Metamaterial", "delta_s_max", float(chromosome['delta_s_max']))
-        fdtd.setnamed("Guia Metamaterial", "P", float(chromosome['P']))
-        fdtd.setnamed("Guia Metamaterial", "M", float(chromosome['M']))
+        fdtd.setnamed("Guia Metamaterial", "H", float(chromosome['H']))
+        fdtd.setnamed("Guia Metamaterial", "alpha_param", float(chromosome['alpha_param']))
+        fdtd.setnamed("Guia Metamaterial", "beta", float(chromosome['beta']))
+        fdtd.setnamed("Guia Metamaterial", "S", float(chromosome['S']))
+        
+        # Parâmetros Geométricos Estruturais
         fdtd.setnamed("Guia Metamaterial", "Lambda", float(chromosome['Lambda']))
         fdtd.setnamed("Guia Metamaterial", "DC", float(chromosome['DC']))
         fdtd.setnamed("Guia Metamaterial", "w", float(chromosome['w']))
@@ -68,7 +71,7 @@ def simulate_generation_lumerical(fdtd, population, temp_base_path,
             res_port1 = fdtd.getresult("FDTD::ports::port_1", "S")
             f_vector = res_port1['f'].flatten()
             s11_complex = res_port1['S'].flatten()
-            print(s11_complex)
+            #print(s11_complex)
             # --- Montagem da Matriz S ---
             num_pts = len(f_vector)
             S_equiv = np.zeros((2, 2, num_pts), dtype=np.complex128)

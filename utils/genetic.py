@@ -26,19 +26,19 @@ class GeneticOptimizer:
 
         # Adiciona os genes de apodização se estiver no modo correto
         if self.mode == "apodized":
-            self.param_ranges['delta_s_max'] = {'range': ranges_dict['delta_s_max_range'], 'type': 'float'}
-            self.param_ranges['P'] = {'range': ranges_dict['P_range'], 'type': 'float'}
-            self.param_ranges['M'] = {'range': ranges_dict['M_range'], 'type': 'float'}
-
+            self.param_ranges['H'] = {'range': ranges_dict['H_range'], 'type': 'int'}
+            self.param_ranges['alpha_param'] = {'range': ranges_dict['alpha_range'], 'type': 'float'}
+            self.param_ranges['beta'] = {'range': ranges_dict['beta_range'], 'type': 'float'}
+            self.param_ranges['S'] = {'range': ranges_dict['S_range'], 'type': 'int'}
         self.population = []
         self.best_individual = None
         self.best_fitness = -float('inf')
         self.fitness_history = [] 
 
-        # Parâmetros de referência (ajustados para a escala do projeto)
+        # Parâmetros de referência 
         self.reference_params = {
             'Lambda': 0.3e-6, 'DC': 0.5, 'w': 0.5e-6, 'w_c': 0.25e-6, 'N': 100,
-            'delta_s_max': 0.05e-6, 'P': 2.0, 'M': 1.0
+            'H': 1, 'alpha_param': 1.0, 'beta': 1.57, 'S': 0
         }
         
         # Steps de mutação local (5% do range total)
@@ -68,11 +68,8 @@ class GeneticOptimizer:
         if chromosome['w_c'] > w_c_max:
             chromosome['w_c'] = w_c_max
 
-        # 2. Se apodizado, delta_s_max não pode ser maior que Lambda / 2 (Física do artigo)
-        if 'delta_s_max' in chromosome:
-            ds_limit = chromosome['Lambda'] / 2.0
-            if chromosome['delta_s_max'] > ds_limit:
-                chromosome['delta_s_max'] = ds_limit
+        # O delta_s_max foi removido daqui pois a restrição física (Lambda * DC) 
+        # agora é calculada nativamente dentro do script LSF do Lumerical.
             
         return chromosome
 
