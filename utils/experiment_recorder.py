@@ -42,7 +42,8 @@ def record_experiment_results(
     transition_bw_nm,
     weight_rej,
     weight_pass,
-    weight_trans
+    weight_trans, 
+    **kwargs
 ):
     """
     Registra os resultados do experimento (JSON) e atualiza o log de dados

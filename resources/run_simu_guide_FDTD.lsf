@@ -21,7 +21,7 @@ for(i= 0:1:N){
 
 sim_time = 1000e-15;
 points = 500;
-mesh_accuracy = 2;
+mesh_accuracy = 1;
 addfdtd;
 set("dimension",2);
 set("simulation time", sim_time);

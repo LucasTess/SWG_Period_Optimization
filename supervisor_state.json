@@ -1,6 +1,6 @@
 {
     "next_index": 0.1,
-    "timestamp": "2026-03-19T15:10:51.968848",
+    "timestamp": "2026-03-20T11:03:50.558108",
     "config_base": {
         "file_paths": {
             "original_uniform_lms_file_name": "bragg_guide_EME.lms",
@@ -15,9 +15,9 @@
             "simulation_lsf_script_name": "run_simu_guide_FDTD.lsf"
         },
         "ga_params": {
-            "population_size": 3,
+            "population_size": 2,
             "mutation_rate": 0.2,
-            "num_generations": 2,
+            "num_generations": 1,
             "enable_convergence_check": true
         },
         "ga_ranges": {
