@@ -1,6 +1,6 @@
 {
-    "next_index": 0.1,
-    "timestamp": "2026-03-20T15:14:51.575181",
+    "next_index": 1.0,
+    "timestamp": "2026-03-23T12:04:05.882855",
     "config_base": {
         "file_paths": {
             "original_uniform_lms_file_name": "bragg_guide_EME.lms",
@@ -74,18 +74,16 @@
         },
         "run_settings": {
             "clean_temp_files": true,
-            "lumerical_hide_ui": false
+            "lumerical_hide_ui": true
         }
     },
     "sweep_params": {
-        "enabled": true,
+        "enabled": false,
         "start": 1450.0,
         "stop": 1550.0,
         "steps": 1,
         "bw_retries": [
-            5.0,
-            10.0,
-            20.0
+            5.0
         ]
     }
 }

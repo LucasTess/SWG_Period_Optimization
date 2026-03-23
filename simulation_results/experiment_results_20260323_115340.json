@@ -1,0 +1,61 @@
+{
+    "experiment_start_time": "2026-03-23T11:53:40.548378",
+    "last_update": "2026-03-23T11:57:35.992519",
+    "current_duration": "0:03:55.444141",
+    "generations_processed": 1,
+    "population_size": 2,
+    "mutation_rate": 0.2,
+    "max_generations_set": 1,
+    "best_individual_so_far": {
+        "Lambda": 3.403386234733992e-07,
+        "DC": 0.6866009512235098,
+        "w": 4.1687256930357545e-07,
+        "N": 474,
+        "w_c": 1.3397901355451616e-07,
+        "H": 3,
+        "alpha_param": 2.5624391490955105,
+        "beta": 0.1969295519444314,
+        "S": 7,
+        "fitness": 0.4381364078044437
+    },
+    "best_fitness_so_far": 0.4381364078044437,
+    "analysis_of_best_in_gen": {
+        "real_peak_wl_nm": 0.0,
+        "real_bw_hz": 0.0,
+        "real_bw_nm": 0.0
+    },
+    "parameter_ranges": {
+        "Lambda": [
+            2e-07,
+            4e-07
+        ],
+        "DC": [
+            0.1,
+            0.9
+        ],
+        "w": [
+            4e-07,
+            6e-07
+        ],
+        "w_c": [
+            5e-08,
+            2.5e-07
+        ],
+        "N": [
+            2.0,
+            500.0
+        ]
+    },
+    "fitness_configuration": {
+        "strategy": "reflection_band",
+        "center_wavelength_nm": 1450.0,
+        "bandwidth_nm": 5.0,
+        "transition_bandwidth_nm": 20,
+        "weight_rejection": 0.5,
+        "weight_passband": 0.2,
+        "weight_transition": 0.3
+    },
+    "fitness_history": [
+        0.4381364078044437
+    ]
+}

@@ -1,5 +1,7 @@
 # run_simu_guide_FDTD.lsf 
-
+groupscope("::model");
+select("FDTD"); 
+delete;
 
 height = getnamed("Guia Metamaterial", "height");
 Lambda = getnamed("Guia Metamaterial", "Lambda");
@@ -21,7 +23,7 @@ for(i= 0:1:N){
 
 sim_time = 1000e-15;
 points = 500;
-mesh_accuracy = 1;
+mesh_accuracy = 2;
 addfdtd;
 set("dimension",2);
 set("simulation time", sim_time);
@@ -35,25 +37,9 @@ set("background material", 'Agua_deion');
 set("mesh accuracy", mesh_accuracy);
 
 
-#addmesh;
-#set("name", "mesh_grating");
-#set("x", 0);
-#set("x span", (N*Lambda)*1.05);
-#set("y", 0);
-#set("y span", w*1.5);
-#set("z", 0);
-#set("z span", height*1.5);
 
- ##defina um passo de malha fixo (ex: 20nm) para evitar que o meshing trave
-#set("enabled", 1);
-#set("set maximum mesh step", 1);
-#set("dx", 0.02e-6); 
-#set("dy", 0.02e-6);
-#set("dz", 0.02e-6);
-
-
-setglobalsource("wavelength start", 1.45e-6);
-setglobalsource("wavelength stop", 1.62e-6);
+setglobalsource("wavelength start", 1.4e-6);
+setglobalsource("wavelength stop", 1.6e-6);
 setglobalsource("optimize for short pulse", 0);
 
 amplitude = 3;
@@ -80,38 +66,8 @@ set("z", 0); set("z span", height * 2);
 # Garante que a Porta 1 é a fonte ativa
 setnamed("FDTD::ports", "source port", "port_1");
 
-
-
-## --- PORT 1 (Entrada / In) ---
-#addport;
-#set("name", "port 1");
-#set("amplitude", amplitude);
-#set("direction", "forward"); # Injeta para a direita (+x)
-#set("x", start - Lambda);
-#set("y", 0); set("y span", w * 1.2);
-#set("z", 0); set("z span", height * 1.2);
-## Seleciona o modo TE0 automaticamente
-#set("mode selection", "fundamental mode");
-
-## --- PORT 2 (Saída / Through) ---
-#addport;
-#set("name", "port 2");
-#set("amplitude", amplitude);
-#set("direction", "backward"); # Recebe luz vinda da esquerda (-x)
-#set("x", (N*Lambda)/2 + Lambda);
-#set("y", 0); set("y span", w * 3);
-#set("z", 0); set("z span", height * 3);
-#set("mode selection", "fundamental mode");
-
 setnamed("FDTD::ports", "monitor frequency points", points);
 setglobalmonitor("frequency points", points);
 
 
-## Monitor drop
-#addprofile ;
-#set("name", "monitor_drop"); # Nome crucial para o Python (fdtd.getresult)
-#set("monitor type",1);
-#set("x", start - Lambda/2 - (Lambda*DC)/2);
-#set("y", 0);
-#set("z", 0);
 

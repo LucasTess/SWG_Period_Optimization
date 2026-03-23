@@ -49,7 +49,7 @@ DEFAULT_CONFIG = {
     },
     "run_settings": {
         "clean_temp_files": True,
-        "lumerical_hide_ui": False
+        "lumerical_hide_ui": True
     }
 }
 
