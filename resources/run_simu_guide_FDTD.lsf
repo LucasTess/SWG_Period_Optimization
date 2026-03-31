@@ -1,6 +1,10 @@
 # run_simu_guide_FDTD.lsf 
+
 groupscope("::model");
 select("FDTD"); 
+delete;
+# Limpa a malha da geração anterior para não sobrepor
+select("bragg_mesh"); 
 delete;
 
 height = getnamed("Guia Metamaterial", "height");
@@ -14,35 +18,52 @@ N = getnamed("Guia Metamaterial", "N");
 substrate_x_max = (N*Lambda) / 2; 
 total_length = N * Lambda;
 start = 0 - total_length/2 + (DC*Lambda)/2;
+
 for(i= 0:1:N){
     if((start + ((i)*Lambda) + (DC*Lambda)/2) <= substrate_x_max){
         num_segments_guide_real = i;        
         last_x = start + i*Lambda;                 
-        }
     }
+}
 
 sim_time = 1000e-15;
 points = 500;
 mesh_accuracy = 2;
+
+# ======================================================================
+# CONFIGURAÇÃO DA REGIÃO FDTD
+# ======================================================================
 addfdtd;
-set("dimension",2);
+# set("name", "FDTD"); # Força o nome para evitar FDTD_1, FDTD_2...
+set("dimension", 2);
 set("simulation time", sim_time);
-set("x",0);
+set("x", 0);
 set("x span", (N*Lambda)*1.1);
-set("y",0);
-set("y span",w*5.5);
+set("y", 0);
+set("y span", w*5.5);
 set("z", 0);
-set("z span", max([height*4; 1e-6]));
+
+# Prevenção contra erros de matrizes em versões específicas do Lumerical
+z_span_val = height * 4;
+if (z_span_val < 1e-6) { z_span_val = 1e-6; }
+set("z span", z_span_val);
+
 set("background material", 'Agua_deion');
 set("mesh accuracy", mesh_accuracy);
 
+# Trava de encerramento prematuro: a simulação para quando a energia sai da tela
+set("auto shutoff min", 1e-5); 
 
 
+# ======================================================================
+# CONFIGURAÇÃO DE FONTES, PORTAS E MONITORES
+# ======================================================================
 setglobalsource("wavelength start", 1.4e-6);
 setglobalsource("wavelength stop", 1.6e-6);
 setglobalsource("optimize for short pulse", 0);
 
 amplitude = 3;
+
 # A porta 1 atuará como Fonte e como Monitor de Reflexão (S11)
 addport;
 set("name", "port_1");
@@ -52,7 +73,9 @@ set("direction", "Forward");
 set("x", start - Lambda/2);
 set("y", 0); 
 set("y span", w * 1.2);
-set("z", 0); set("z span", height * 2);
+set("z", 0); 
+set("z span", height * 2);
+
 # A porta 2 atuará como Monitor de Transmissão (S21)
 addport;
 set("name", "port_2");
@@ -62,12 +85,11 @@ set("direction", "Backward");
 set("x", (N*Lambda)/2 + Lambda/2);
 set("y", 0); 
 set("y span", w * 1.2);
-set("z", 0); set("z span", height * 2);
-# Garante que a Porta 1 é a fonte ativa
-setnamed("FDTD::ports", "source port", "port_1");
+set("z", 0); 
+set("z span", height * 2);
 
+# Garante foco no solver correto e atribui a porta ativa e monitores
+select("FDTD");
+setnamed("FDTD::ports", "source port", "port_1");
 setnamed("FDTD::ports", "monitor frequency points", points);
 setglobalmonitor("frequency points", points);
-
-
-

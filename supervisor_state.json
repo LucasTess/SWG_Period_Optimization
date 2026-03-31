@@ -1,6 +1,6 @@
 {
     "next_index": 1.0,
-    "timestamp": "2026-03-23T12:04:05.882855",
+    "timestamp": "2026-03-24T03:40:38.964018",
     "config_base": {
         "file_paths": {
             "original_uniform_lms_file_name": "bragg_guide_EME.lms",
@@ -15,9 +15,9 @@
             "simulation_lsf_script_name": "run_simu_guide_FDTD.lsf"
         },
         "ga_params": {
-            "population_size": 2,
+            "population_size": 50,
             "mutation_rate": 0.2,
-            "num_generations": 1,
+            "num_generations": 160,
             "enable_convergence_check": true
         },
         "ga_ranges": {
@@ -74,14 +74,14 @@
         },
         "run_settings": {
             "clean_temp_files": true,
-            "lumerical_hide_ui": true
+            "lumerical_hide_ui": false
         }
     },
     "sweep_params": {
-        "enabled": false,
+        "enabled": true,
         "start": 1450.0,
         "stop": 1550.0,
-        "steps": 1,
+        "steps": 3,
         "bw_retries": [
             5.0
         ]
