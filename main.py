@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import traceback
 import copy 
+import glob
 
 # --- Caminho para a API do Lumerical ---
 _lumapi_module_path = "C:\\Program Files\\Lumerical\\v241\\api\\python"
@@ -15,6 +16,23 @@ if _lumapi_module_path not in sys.path:
     sys.path.append(_lumapi_module_path)
 
 import lumapi
+
+# --- NOVA FUNÇÃO AUXILIAR ---
+def find_latest_csv_for_target(results_dir, mode, strategy, center_wl):
+    """
+    Vasculha a pasta simulation_results e retorna o caminho do arquivo 
+    _full_data.csv mais recente referente ao alvo específico.
+    """
+    search_pattern = os.path.join(results_dir, f"{mode}_{strategy}_{center_wl}nm_*_full_data.csv")
+    matching_files = glob.glob(search_pattern)
+    
+    if not matching_files:
+        return None
+        
+    # Ordena os arquivos pela data de modificação (o mais recente por último)
+    matching_files.sort(key=os.path.getmtime)
+    return matching_files[-1] # Retorna o mais recente
+
 
 # --- Importações dos módulos personalizados ---
 from utils.genetic import GeneticOptimizer
@@ -92,6 +110,73 @@ def run_optimization(config: dict, stop_check=None):
         w_transition=fit_p['weights']['transition']
     )
 
+# --- [NOVO BLOCO] Inicialização do AG com lógica de RESUME ---
+    if not os.path.exists(_original_file_path):
+        raise FileNotFoundError(f"Arquivo base não encontrado: {_original_file_path}")
+        
+    shutil.copy(_original_file_path, _temp_base_path)
+    
+    optimizer = GeneticOptimizer(ga_p['population_size'], ga_p['mutation_rate'], ga_p['num_generations'], ga_r)
+    generations_processed = 0 # Inicia o contador padrão
+    resume_csv_path = None
+    
+    # Verifica a flag injetada pelo Supervisor
+    is_resuming = run_s.get('is_resume', False)
+    
+    if is_resuming:
+        print(f"\n[SISTEMA] Tentando retomar simulação para o alvo {fit_p['center_wl_nm']} nm...")
+        resume_csv_path = find_latest_csv_for_target(
+            _simulation_results_directory, ga_r['mode'], 
+            fit_p['strategy_name'], fit_p['center_wl_nm']
+        )
+        
+    if is_resuming and resume_csv_path:
+        try:
+            print(f"[SISTEMA] Lendo arquivo CSV: {os.path.basename(resume_csv_path)}")
+            df = pd.read_csv(resume_csv_path)
+            
+            # Encontra qual foi a última geração registrada
+            last_gen = int(df['Generation'].max())
+            generations_processed = last_gen
+            
+            # Filtra os dados apenas da última geração para reconstruir a população
+            last_gen_data = df[df['Generation'] == last_gen]
+            
+            # Reconstrói os indivíduos (Ignora as colunas de métricas e puxa apenas os genes)
+            gene_keys = [k.replace('_range', '') for k in ga_r.keys() if k.endswith('_range')]
+            
+            recovered_population = []
+            for _, row in last_gen_data.iterrows():
+                indiv = {}
+                for key in gene_keys:
+                    indiv[key] = row[key]
+                recovered_population.append(indiv)
+            
+            optimizer.population = recovered_population
+            current_population = optimizer.population
+            
+            print(f"[SISTEMA] Sucesso! Retomando a partir da Geração {generations_processed} ({len(recovered_population)} indivíduos).")
+            
+            # Mantém o mesmo nome de arquivo original para continuar escrevendo nele
+            full_data_csv_path = resume_csv_path
+            
+        except Exception as e:
+            print(f"[SISTEMA] Falha ao ler CSV para retomada ({e}). Iniciando do zero.")
+            optimizer.initialize_population()
+            current_population = optimizer.population
+            full_data_csv_path = os.path.join(_simulation_results_directory, f"{experiment_prefix}_full_data.csv")
+    else:
+        # Caminho Padrão (Sem Resume ou Arquivo Não Encontrado)
+        if is_resuming:
+             print(f"[SISTEMA] Nenhum CSV anterior encontrado para {fit_p['center_wl_nm']} nm. Iniciando do zero.")
+        optimizer.initialize_population()
+        current_population = optimizer.population
+        full_data_csv_path = os.path.join(_simulation_results_directory, f"{experiment_prefix}_full_data.csv")
+
+    all_individuals_data = [] 
+    mode_session = None
+
+
     # --- Inicialização do AG ---
     if not os.path.exists(_original_file_path):
         raise FileNotFoundError(f"Arquivo base não encontrado: {_original_file_path}")
@@ -114,12 +199,15 @@ def run_optimization(config: dict, stop_check=None):
         else:
             mode_session = lumapi.MODE(hide=run_s['lumerical_hide_ui'])
         
-        for gen_num in range(ga_p['num_generations']):
+        # --- [NOVO] O loop inicia a partir do ponto salvo ---
+        # generations_processed já guarda a última geração concluída (ex: 53)
+        for gen_num in range(generations_processed, ga_p['num_generations']):
             if stop_check and stop_check():
                 print("\n--- Parada solicitada. Encerrando motor... ---")
                 break 
 
-            generations_processed += 1
+            # Incrementa antes de exibir (Se parou na 53, agora é a 54)
+            generations_processed += 1 
             print(f"\n--- Geração {generations_processed}/{ga_p['num_generations']} ---")
             
             # Chama o workflow (EME ou FDTD)

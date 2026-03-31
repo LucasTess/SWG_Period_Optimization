@@ -96,6 +96,9 @@ class OptimizationWorker(QThread):
         
         summary = []
         
+        # --- [NOVO] Lê a flag de retomada injetada pelo start_opt ---
+        is_first_run_of_resume = self.config_base.get('run_settings', {}).get('is_resume', False)
+        
         for i in range(start_i, len(targets)):
             if OptimizationWorker.should_stop(): return "Interrompido."
             
@@ -115,12 +118,15 @@ class OptimizationWorker(QThread):
                 cfg['fitness_params']['center_wl_nm'] = float(target_wl)
                 cfg['fitness_params']['bandwidth_nm'] = float(bw)
                 
+                # --- [NOVO] Injeta a flag. Se for a primeira rodada do RESUME, será True. 
+                # Para todas as iterações e alvos seguintes, será False. ---
+                cfg['run_settings']['is_resume'] = is_first_run_of_resume
+                is_first_run_of_resume = False 
+                
                 best_fit, _ = run_optimization(cfg, stop_check=OptimizationWorker.should_stop)
 
-                # --- [CORREÇÃO CRÍTICA AQUI] ---
-                # Se o motor retornou (provavelmente com -inf) porque o usuário apertou STOP:
+                # Se o motor retornou porque o usuário apertou STOP:
                 if OptimizationWorker.should_stop():
-                    # Salvamos o estado ATUAL (j) e não o próximo (j+1)
                     current_state = float(i) + (float(j) / 10.0)
                     self.save_current_state(current_state)
                     self.progress_sig.emit(f"  [Checkpoint] Parada detectada. Estado salvo em: {current_state}")
@@ -300,6 +306,10 @@ class BraggSupervisorUI(QMainWindow):
         
         try:
             config = self.collect_config()
+            
+            # --- [NOVO] Passa a intenção do botão para a configuração base ---
+            config['run_settings']['is_resume'] = not restart
+            
             bw_list = [float(x.strip()) for x in self.edit_bw_retries.text().split(',')]
             sweep = {'enabled': self.chk_sweep.isChecked(), 'start': self.wl_start.value(), 'stop': self.wl_stop.value(), 'steps': self.wl_steps.value(), 'bw_retries': bw_list}
             self.worker = OptimizationWorker(config, sweep, start_idx)

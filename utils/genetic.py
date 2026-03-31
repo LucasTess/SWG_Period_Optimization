@@ -20,25 +20,26 @@ class GeneticOptimizer:
         }
         
         # w_c é tratado com um range dinâmico baseado no w_c_range_max_ratio
-        # mas definimos uma entrada aqui para facilitar a lógica de mutação/limitação
         max_w = ranges_dict['w_range'][1]
         self.param_ranges['w_c'] = {'range': (1e-7, max_w), 'type': 'float'}
 
         # Adiciona os genes de apodização se estiver no modo correto
         if self.mode == "apodized":
             self.param_ranges['H'] = {'range': ranges_dict['H_range'], 'type': 'int'}
-            self.param_ranges['alpha_param'] = {'range': ranges_dict['alpha_range'], 'type': 'float'}
+            # [CORREÇÃO CRÍTICA]: Nome ajustado para 'alpha' para parear com 'alpha_range' do CSV
+            self.param_ranges['alpha'] = {'range': ranges_dict['alpha_range'], 'type': 'float'}
             self.param_ranges['beta'] = {'range': ranges_dict['beta_range'], 'type': 'float'}
             self.param_ranges['S'] = {'range': ranges_dict['S_range'], 'type': 'int'}
+            
         self.population = []
         self.best_individual = None
         self.best_fitness = -float('inf')
         self.fitness_history = [] 
 
-        # Parâmetros de referência 
+        # Parâmetros de referência (Também corrigido para 'alpha')
         self.reference_params = {
             'Lambda': 0.3e-6, 'DC': 0.5, 'w': 0.5e-6, 'w_c': 0.25e-6, 'N': 100,
-            'H': 1, 'alpha_param': 1.0, 'beta': 1.57, 'S': 0
+            'H': 1, 'alpha': 1.0, 'beta': 1.57, 'S': 0
         }
         
         # Steps de mutação local (5% do range total)
@@ -68,9 +69,6 @@ class GeneticOptimizer:
         if chromosome['w_c'] > w_c_max:
             chromosome['w_c'] = w_c_max
 
-        # O delta_s_max foi removido daqui pois a restrição física (Lambda * DC) 
-        # agora é calculada nativamente dentro do script LSF do Lumerical.
-            
         return chromosome
 
     def create_chromosome(self, reference_based=False):
@@ -90,7 +88,7 @@ class GeneticOptimizer:
 
     def initialize_population(self):
         self.population = []
-        num_ref_based = self.population_size // 4 # Reduzi para 25% para dar mais espaço à exploração
+        num_ref_based = self.population_size // 4 # 25% para dar mais espaço à exploração
         for _ in range(num_ref_based):
             self.population.append(self.create_chromosome(reference_based=True))
         for _ in range(self.population_size - num_ref_based):
