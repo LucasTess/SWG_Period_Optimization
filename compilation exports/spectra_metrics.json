@@ -1,0 +1,110 @@
+{
+    "Fit_0.9314_WL_1450.0nm_BW_5nm": {
+        "fitness": 0.9314,
+        "peak_reflectance_dB": -0.113,
+        "peak_wavelength_nm": 1452.4,
+        "center_wavelength_3dB_nm": 1448.1855,
+        "bandwidth_3dB_nm": 9.4131,
+        "side_lobe_suppression_ratio_dB": 1.9021,
+        "highest_side_lobe_dB": -2.0151
+    },
+    "Fit_0.8906_WL_1460.0nm_BW_5nm": {
+        "fitness": 0.8906,
+        "peak_reflectance_dB": -0.431,
+        "peak_wavelength_nm": 1456.8,
+        "center_wavelength_3dB_nm": 1462.9561,
+        "bandwidth_3dB_nm": 14.6268,
+        "side_lobe_suppression_ratio_dB": 5.2823,
+        "highest_side_lobe_dB": -5.7133
+    },
+    "Fit_0.8826_WL_1470.0nm_BW_5nm": {
+        "fitness": 0.8826,
+        "peak_reflectance_dB": -0.7623,
+        "peak_wavelength_nm": 1472.0,
+        "center_wavelength_3dB_nm": 1469.8102,
+        "bandwidth_3dB_nm": 18.0642,
+        "side_lobe_suppression_ratio_dB": 12.0152,
+        "highest_side_lobe_dB": -12.7775
+    },
+    "Fit_0.8482_WL_1480.0nm_BW_20nm": {
+        "fitness": 0.8482,
+        "peak_reflectance_dB": -0.1979,
+        "peak_wavelength_nm": 1485.2,
+        "center_wavelength_3dB_nm": 1480.0248,
+        "bandwidth_3dB_nm": 24.6911,
+        "side_lobe_suppression_ratio_dB": 4.7899,
+        "highest_side_lobe_dB": -4.9878
+    },
+    "Fit_0.8893_WL_1490.0nm_BW_10nm": {
+        "fitness": 0.8893,
+        "peak_reflectance_dB": -1.1628,
+        "peak_wavelength_nm": 1476.4,
+        "center_wavelength_3dB_nm": 1463.2841,
+        "bandwidth_3dB_nm": 30.2531,
+        "side_lobe_suppression_ratio_dB": 5.0554,
+        "highest_side_lobe_dB": -6.2182
+    },
+    "Fit_0.9327_WL_1500.0nm_BW_5nm": {
+        "fitness": 0.9327,
+        "peak_reflectance_dB": -0.2934,
+        "peak_wavelength_nm": 1500.8,
+        "center_wavelength_3dB_nm": 1497.014,
+        "bandwidth_3dB_nm": 11.7774,
+        "side_lobe_suppression_ratio_dB": 2.8684,
+        "highest_side_lobe_dB": -3.1618
+    },
+    "Fit_0.9066_WL_1510.0nm_BW_10nm": {
+        "fitness": 0.9066,
+        "peak_reflectance_dB": -0.1258,
+        "peak_wavelength_nm": 1512.4,
+        "center_wavelength_3dB_nm": 1505.5609,
+        "bandwidth_3dB_nm": 22.3225,
+        "side_lobe_suppression_ratio_dB": 2.6018,
+        "highest_side_lobe_dB": -2.7277
+    },
+    "Fit_0.8078_WL_1520.0nm_BW_10nm": {
+        "fitness": 0.8078,
+        "peak_reflectance_dB": -0.0001,
+        "peak_wavelength_nm": 1516.0,
+        "center_wavelength_3dB_nm": 1507.1157,
+        "bandwidth_3dB_nm": 27.4949,
+        "side_lobe_suppression_ratio_dB": 0.9388,
+        "highest_side_lobe_dB": -0.9389
+    },
+    "Fit_0.9432_WL_1530.0nm_BW_5nm": {
+        "fitness": 0.9432,
+        "peak_reflectance_dB": -0.0497,
+        "peak_wavelength_nm": 1534.4,
+        "center_wavelength_3dB_nm": 1528.8233,
+        "bandwidth_3dB_nm": 15.3396,
+        "side_lobe_suppression_ratio_dB": 2.3032,
+        "highest_side_lobe_dB": -2.353
+    },
+    "Fit_0.8368_WL_1540.0nm_BW_10nm": {
+        "fitness": 0.8368,
+        "peak_reflectance_dB": -0.7748,
+        "peak_wavelength_nm": 1540.4,
+        "center_wavelength_3dB_nm": 1538.1823,
+        "bandwidth_3dB_nm": 29.9845,
+        "side_lobe_suppression_ratio_dB": 6.9086,
+        "highest_side_lobe_dB": -7.6834
+    },
+    "Fit_0.9001_WL_1540.0nm_BW_10nm": {
+        "fitness": 0.9001,
+        "peak_reflectance_dB": -0.1819,
+        "peak_wavelength_nm": 1537.6,
+        "center_wavelength_3dB_nm": 1537.7504,
+        "bandwidth_3dB_nm": 26.997,
+        "side_lobe_suppression_ratio_dB": 3.6022,
+        "highest_side_lobe_dB": -3.7842
+    },
+    "Fit_0.7750_WL_1550.0nm_BW_20nm": {
+        "fitness": 0.775,
+        "peak_reflectance_dB": -0.6552,
+        "peak_wavelength_nm": 1553.2,
+        "center_wavelength_3dB_nm": 1545.8027,
+        "bandwidth_3dB_nm": 34.0709,
+        "side_lobe_suppression_ratio_dB": 12.0523,
+        "highest_side_lobe_dB": -12.7075
+    }
+}
