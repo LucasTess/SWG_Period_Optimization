@@ -24,10 +24,10 @@ class GeneticOptimizer:
 
         # Parâmetros de referência atualizados
         self.reference_params = {
-            'Lambda': 0.3e-6,
+            'Lambda': 0.304e-6,
             'DC': 0.5,
             'w': 0.5e-6,
-            'w_c': 0.25e-6, # w_c < w
+            'w_c': 0.64e-6, # w_c < w
             'N': 100
         }
         

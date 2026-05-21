@@ -29,9 +29,9 @@ DEFAULT_CONFIG = {
         "simulation_results_directory_name": "simulation_results"
     },
     "ga_params": {
-        "population_size": 50,
+        "population_size": 80,
         "mutation_rate": 0.2,
-        "num_generations": 160,
+        "num_generations": 300,
         "enable_convergence_check": True,
         "convergence_patience_ratio": 0.2, # % de num_generations
         "min_convergence_patience": 20
@@ -51,9 +51,9 @@ DEFAULT_CONFIG = {
         "bandwidth_nm": 5,
         "transition_bw_nm": 20,
         "weights": {
-            "rejection": 0.50,
-            "passband": 0.20,
-            "transition": 0.30
+            "rejection": 0.20,
+            "passband": 0.60,
+            "transition": 0.20
         }
     },
     "run_settings": {
@@ -74,8 +74,8 @@ WAVELENGTH_STOP_NM = 1550
 WAVELENGTH_STEPS = 11
 
 # 2. Lógica de Repetição (Retry)
-BANDWIDTH_SWEEP_NM = [5, 10, 20]
-FITNESS_THRESHOLD = 0.75
+BANDWIDTH_SWEEP_NM = [8,10,12]
+FITNESS_THRESHOLD = 0.8
 
 # 3. Arquivos de Gerenciamento do Supervisor (Salvos na pasta raiz)
 SWEEP_STATE_FILE = "supervisor_state.json"

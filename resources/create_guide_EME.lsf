@@ -11,16 +11,16 @@ material = getnamed("Guia Metamaterial", "material");
 
 # 2. Constrói a geometria com base nesses parâmetros
 
-# Cria substrato
+# Cria Substrato inferior
 addrect;
 set("material", 'SiO2 (Glass) - Palik');
 set("name","Substrato - SiO2");
 set("x",0); set("x span", Lambda*8); set("y", 0); set("y span", w*3);
 set("z", -0.22e-6); set("z span", 0.22e-6);
 
-# Cria Agua
+# Cria Substrato superior
 addrect;
-set("material", 'Agua_deion');
+set("material", 'SiO2 (Glass) - Palik');
 set("name","Agua");
 set("x",0); set("x span", Lambda*8); set("y", 0); set("y span", w*3);
 set("z", 0); set("z span", height*3); set("alpha", 0.4);
