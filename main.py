@@ -17,6 +17,7 @@ if _lumapi_module_path not in sys.path:
 import lumapi
 
 from utils.genetic import GeneticOptimizer
+from utils.woa import WhaleOptimizer
 from utils.experiment_recorder import record_experiment_results
 from utils.lumerical_workflow import simulate_generation_lumerical
 from utils.fitness_functions import (
@@ -25,6 +26,8 @@ from utils.fitness_functions import (
 )
 from utils.file_handler import clean_simulation_directory
 from utils.analysis import run_full_analysis, analyze_peak_properties
+
+
 
 def run_optimization(config: dict):
     fp = config['file_paths']
@@ -89,54 +92,56 @@ def run_optimization(config: dict):
     f_trans_edge_hz = c / (w_center_m - (w_trans_bw_m / 2))
     transition_bandwidth_hz = abs(f_trans_edge_hz - f_center_hz) * 2
     
-    # Gera o nome do experimento (se for resgate, tenta manter o nome original)
+
+# --- Identifica o Otimizador Desejado ---
+    opt_type = config.get('optimizer_type', 'GA')
+
+    # Gera o nome do experimento (Nomenclatura Limpa)
     experiment_start_time = datetime.datetime.now()
     if checkpoint:
         full_data_csv_path = original_csv_path
-        # Extrai o prefixo antigo via regex
-        match = re.search(r'(reflection_band_.*_\d{8}_\d{6})_full_data', os.path.basename(original_csv_path))
-        if match:
-            experiment_prefix = match.group(1)
-        else:
-            experiment_prefix = f"rescued_exp_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        # Resgata o prefixo exato do arquivo antigo
+        experiment_prefix = os.path.basename(original_csv_path).replace('_full_data.csv', '')
     else:
         timestamp_str = experiment_start_time.strftime('%Y%m%d_%H%M%S')
-        experiment_prefix = f"{fit_p['strategy_name']}_{fit_p['center_wl_nm']}nm_{fit_p['bandwidth_nm']}nm_{timestamp_str}"
+        # Padrão: 1450.0nm_8nm_20260525_113110
+        experiment_prefix = f"{CENTER_WAVELENGTH_NM}nm_{BANDWIDTH_NM}nm_{timestamp_str}"
         full_data_csv_path = os.path.join(_simulation_results_directory, f"{experiment_prefix}_full_data.csv")
     
     print("--------------------------------------------------------------------------")
-    print(f"Iniciando Otimização: {experiment_prefix}")
+    print(f"Iniciando Otimização: {experiment_prefix} [{opt_type}]")
     print(f"--> Alvo Central: {CENTER_WAVELENGTH_NM} nm")
     print("--------------------------------------------------------------------------")
-    
-    if FITNESS_STRATEGY_NAME == "delta_amp":
-        fitness_calculator = DeltaAmpStrategy()
-    elif FITNESS_STRATEGY_NAME == "highpass":
-        fitness_calculator = HighpassStrategy(f_cutoff=f_cutoff_hz, transition_bandwidth=transition_bandwidth_hz, w_rejection=WEIGHT_REJECTION, w_passband=WEIGHT_PASSBAND, w_transition=WEIGHT_TRANSITION)
-    elif FITNESS_STRATEGY_NAME == "lowpass":
-        fitness_calculator = LowpassStrategy(f_cutoff=f_cutoff_hz, transition_bandwidth=transition_bandwidth_hz, w_rejection=WEIGHT_REJECTION, w_passband=WEIGHT_PASSBAND, w_transition=WEIGHT_TRANSITION)
-    elif FITNESS_STRATEGY_NAME == "bandpass":
-        fitness_calculator = BandpassStrategy(f_center=f_center_hz, bandwidth=bandwidth_hz, transition_bandwidth=transition_bandwidth_hz, w_rejection=WEIGHT_REJECTION, w_passband=WEIGHT_PASSBAND, w_transition=WEIGHT_TRANSITION)
-    elif FITNESS_STRATEGY_NAME == "reflection_band":
+    if FITNESS_STRATEGY_NAME == "reflection_band":
         fitness_calculator = ReflectionBandStrategy(f_center=f_center_hz, bandwidth=bandwidth_hz, transition_bandwidth=transition_bandwidth_hz, w_rejection=WEIGHT_REJECTION, w_passband=WEIGHT_PASSBAND, w_transition=WEIGHT_TRANSITION)
     else:
         raise ValueError("Estratégia inválida.")
 
     shutil.copy(_original_lms_path, _temp_lms_base_path)
 
-    optimizer = GeneticOptimizer(
-        population_size, mutation_rate, num_generations,
-        ga_r['Lambda_range'], ga_r['DC_range'], ga_r['w_range'], w_c_range, ga_r['N_range']
-    )
+# --- INSTANCIAÇÃO DO OTIMIZADOR (FACTORY) ---
+    if opt_type == 'WOA':
+        optimizer = WhaleOptimizer(
+            population_size, mutation_rate, num_generations,
+            ga_r['Lambda_range'], ga_r['DC_range'], ga_r['w_range'], w_c_range, ga_r['N_range']
+        )
+        # O WOA precisa saber a geração atual para calcular o cerco da presa (decaimento de 'a')
+        if checkpoint:
+            optimizer.current_generation = resume_gen
+    else:
+        optimizer = GeneticOptimizer(
+            population_size, mutation_rate, num_generations,
+            ga_r['Lambda_range'], ga_r['DC_range'], ga_r['w_range'], w_c_range, ga_r['N_range']
+        )
     
-    # --- INJEÇÃO DA POPULAÇÃO ---
+# --- INJEÇÃO DA POPULAÇÃO ---
     if checkpoint:
         optimizer.population = rescued_pop
     else:
         optimizer.initialize_population()
         
+    # [CORREÇÃO] Declara a variável antes do loop começar!
     current_population = optimizer.population
-
     # Se for um resgate, o generations_processed começa do valor retomado para que a escrita no CSV não volte para o número 1
     generations_processed = resume_gen
     
@@ -228,7 +233,8 @@ def run_optimization(config: dict):
                 transition_bw_nm=TRANSITION_BANDWIDTH_NM,
                 weight_rej=WEIGHT_REJECTION,
                 weight_pass=WEIGHT_PASSBAND,
-                weight_trans=WEIGHT_TRANSITION
+                weight_trans=WEIGHT_TRANSITION,
+                optimizer_type=opt_type  # <--- NOVA LINHA AQUI
             )
             
             if all_individuals_data:

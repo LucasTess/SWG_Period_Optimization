@@ -1,6 +1,4 @@
 # utils/experiment_recorder.py
-# Centraliza o salvamento de JSON (com análise) e CSV (rápido).
-
 import os
 import datetime
 import json
@@ -9,49 +7,19 @@ import numpy as np
 import pandas as pd
 import re
 
-# Importa a função de análise que será chamada 1x por geração
 from utils.analysis import analyze_peak_properties 
-
-# Velocidade da luz (para conversão nm <-> Hz)
 c = 299792458.0 
 
 def record_experiment_results(
-    # --- Parâmetros de Configuração e Caminho ---
-    output_directory,
-    full_data_csv_path,
-    experiment_start_time,
-    
-    # --- Estado do Otimizador ---
-    optimizer_instance,
-    generations_processed,
-    
-    # --- Dados da Geração Atual (para CSV) ---
-    all_individuals_data_list,  # A lista mestre de dados
-    current_population,
-    fitness_scores_for_gen,
-    
-    # --- Dados para Análise do Melhor Indivíduo ---
-    real_peak_wl_nm,
-    real_bw_hz,
-    
-    # --- Configs de Parâmetros (para JSON) ---
+    output_directory, full_data_csv_path, experiment_start_time,
+    optimizer_instance, generations_processed, all_individuals_data_list, 
+    current_population, fitness_scores_for_gen, real_peak_wl_nm, real_bw_hz,
     Lambda_range, DC_range, w_range, w_c_range, N_range,
-    
-    # --- Configs de Fitness (para JSON e CSV) ---
-    fitness_strategy_name,
-    center_wl_nm,
-    bandwidth_nm,
-    transition_bw_nm,
-    weight_rej,
-    weight_pass,
-    weight_trans
+    fitness_strategy_name, center_wl_nm, bandwidth_nm, transition_bw_nm,
+    weight_rej, weight_pass, weight_trans,
+    optimizer_type # <-- NOVO PARÂMETRO
 ):
-    """
-    Registra os resultados do experimento (JSON) e atualiza o log de dados
-    completo (CSV) para a geração atual.
-    """
     
-    # Extrai a assinatura de tempo do nome do arquivo CSV original
     csv_filename = os.path.basename(full_data_csv_path)
     match = re.search(r'(\d{8}_\d{6})', csv_filename)
     
@@ -60,8 +28,6 @@ def record_experiment_results(
     else:
         timestamp_str = experiment_start_time.strftime('%Y%m%d_%H%M%S')
         
-    # --- COMPARTIMENTAÇÃO: Criação da Subpasta ---
-    # Cria uma pasta específica para este experimento dentro de simulation_results
     experiment_subfolder = os.path.join(output_directory, f"results_{timestamp_str}")
     os.makedirs(experiment_subfolder, exist_ok=True)
         
@@ -71,11 +37,12 @@ def record_experiment_results(
     current_time = datetime.datetime.now()
     duration = current_time - experiment_start_time
 
-    # --- 1. Atualiza a Lista Mestre (Prepara dados do CSV) ---
+    # --- 1. Atualiza a Lista Mestre para o CSV ---
     for i, chromosome in enumerate(current_population):
         individual_data = chromosome.copy()
         individual_data['Fitness'] = fitness_scores_for_gen[i]
         individual_data['generation'] = generations_processed
+        individual_data['optimizer_type'] = optimizer_type  # <-- GRAVA NO CSV
         individual_data['fitness_strategy'] = fitness_strategy_name
         individual_data['target_center_nm'] = center_wl_nm
         individual_data['target_bw_nm'] = bandwidth_nm
@@ -86,15 +53,12 @@ def record_experiment_results(
         
         all_individuals_data_list.append(individual_data)
 
-    # --- 2. Sincronização do Histórico (Cura a "amnésia" do resgate) ---
+    # --- 2. Sincronização do Histórico ---
     if all_individuals_data_list:
         df_temp = pd.DataFrame(all_individuals_data_list)
-        
-        # Reconstrói a linha do tempo completa do fitness agrupando por geração
         full_history = df_temp.groupby('generation')['Fitness'].max().tolist()
         optimizer_instance.fitness_history = full_history
         
-        # Garante que o melhor indivíduo absoluto do passado não seja esquecido
         best_idx = df_temp['Fitness'].idxmax()
         best_row = df_temp.loc[best_idx]
         
@@ -107,16 +71,16 @@ def record_experiment_results(
             'N': int(best_row['N'])
         }
 
-    # --- 3. Salva o CSV Completo (Continua na pasta principal) ---
+    # --- 3. Salva o CSV Completo ---
     if all_individuals_data_list:
         try:
             df_all_data = pd.DataFrame(all_individuals_data_list)
             df_all_data.to_csv(full_data_csv_path, index=False)
             print(f"  [Análise] Dados de {len(all_individuals_data_list)} indivíduos atualizados no CSV bruto.")
         except Exception as e:
-            print(f"!!! Erro ao salvar/atualizar log de dados (CSV): {e}")
+            print(f"!!! Erro ao salvar log de dados (CSV): {e}")
 
-    # --- 4. Análise do Melhor da Geração Atual (para JSON) ---
+    # --- 4. Análise do Melhor da Geração ---
     best_gen_analysis = {}
     try:
         real_bw_nm = 0.0
@@ -134,16 +98,16 @@ def record_experiment_results(
             "real_bw_nm": real_bw_nm
         }
     except Exception as e:
-        print(f"!!! Erro ao calcular real_bw_nm para JSON: {e}")
+        pass
 
     # --- 5. Lógica do JSON ---
     results_data = {
         "experiment_start_time": experiment_start_time.isoformat(),
         "last_update": current_time.isoformat(),
+        "optimizer_type": optimizer_type,  # <-- GRAVA NO JSON
         "current_duration": str(duration),
         "generations_processed": generations_processed,
         "population_size": optimizer_instance.population_size,
-        "mutation_rate": optimizer_instance.mutation_rate,
         "max_generations_set": optimizer_instance.generations,
         "best_individual_so_far": optimizer_instance.best_individual,
         "best_fitness_so_far": optimizer_instance.best_fitness,
@@ -175,15 +139,13 @@ def record_experiment_results(
         plt.figure(figsize=(10, 6))
         generations = range(1, len(optimizer_instance.fitness_history) + 1)
         plt.plot(generations, optimizer_instance.fitness_history, marker='o', linestyle='-')
-        plt.title(f'Histórico de Fitness (Atualizado em: {current_time.strftime("%H:%M:%S")})')
+        plt.title(f'Histórico de Fitness ({optimizer_type})') # Colocando a sigla no título também!
         plt.xlabel('Geração')
         plt.ylabel('Melhor Fitness')
         plt.grid(True)
         try:
             plt.savefig(plot_path)
         except Exception as e:
-            print(f"!!! Erro ao salvar gráfico: {e}")
+            pass
         finally:
-            plt.close() 
-    else:
-        print("Nenhum histórico de fitness para plotar.")
+            plt.close()

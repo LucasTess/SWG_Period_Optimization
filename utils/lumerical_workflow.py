@@ -102,7 +102,7 @@ def simulate_generation_lumerical(mode_session, current_population, lms_base_pat
     frequencies = None
     
     for chrom_id, chromosome in enumerate(current_population):
-        print(f"\n--- Processando Cromossomo {chrom_id + 1}/{len(current_population)} ---")
+        print(f"\n--- Processando Indivíduo {chrom_id + 1}/{len(current_population)} ---")
         
         lms_main_path = os.path.join(temp_directory, f"chrom_{chrom_id+1}_eme.lms")
 

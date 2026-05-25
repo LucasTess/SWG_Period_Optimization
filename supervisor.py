@@ -4,18 +4,19 @@ import copy
 import datetime
 import pandas as pd
 import os
-import glob
-import json
-import traceback
 
 try:
     from main import run_optimization
 except ImportError as e:
     print(f"Erro: Não foi possível importar 'run_optimization' de main.py: {e}")
     exit(1)
+    
+# Importa o módulo isolado de resgate e gestão de estado
+from utils.recover import check_for_checkpoint, load_or_create_sweep_state, save_sweep_state
 
-# --- [NOVO] Configuração Padrão ---
+# --- Configuração Padrão ---
 DEFAULT_CONFIG = {
+    "optimizer_type": "WOA",  # Opções: "WOA" ou "GA"
     "file_paths": {
         "original_lms_file_name": "SWG_period_EME.lms",
         "geometry_lsf_script_name": "create_guide_EME.lsf",
@@ -23,7 +24,7 @@ DEFAULT_CONFIG = {
         "simulation_results_directory_name": "simulation_results"
     },
     "ga_params": {
-        "population_size": 20,
+        "population_size": 10,
         "mutation_rate": 0.2,
         "num_generations": 300,
         "enable_convergence_check": True,
@@ -68,88 +69,6 @@ SWEEP_STATE_FILE = "supervisor_state.json"
 SWEEP_SUMMARY_FILE_PREFIX = "sweep_summary"
 # --- Fim do Painel de Controle ---
 
-def load_state_from_file(filename: str) -> dict:
-    if os.path.exists(filename):
-        try:
-            with open(filename, 'r') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"!!! Erro ao ler o arquivo de estado {filename}: {e}")
-    return {"start_index": 0, "all_experiment_results": []}
-
-def save_state(filename: str, state: dict):
-    try:
-        with open(filename, 'w') as f:
-            json.dump(state, f, indent=4)
-    except Exception as e:
-        pass
-
-def check_for_checkpoint(target_wl, target_bw, config):
-    """
-    Vasculha a pasta de resultados por um experimento interrompido que 
-    bata perfeitamente com as configurações atuais.
-    Retorna (geracao_retomada, populacao_resgatada, path_csv_original) ou (0, None, None).
-    """
-    sim_dir = config['file_paths']['simulation_results_directory_name']
-    if not os.path.exists(sim_dir):
-        return 0, None, None
-
-    csv_files = glob.glob(os.path.join(sim_dir, "*_full_data.csv"))
-    pop_size = config['ga_params']['population_size']
-    w_rej = config['fitness_params']['weights']['rejection']
-    w_pass = config['fitness_params']['weights']['passband']
-    w_trans = config['fitness_params']['weights']['transition']
-
-    for file in csv_files:
-        try:
-            df = pd.read_csv(file)
-            
-            # 1. Verifica Integridade Básica
-            required_cols = ['target_center_nm', 'target_bw_nm', 'w_rej', 'w_pass', 'w_trans', 'generation']
-            if not all(c in df.columns for c in required_cols):
-                continue
-            
-            # 2. Verifica a "Assinatura" do Experimento na primeira linha
-            first_row = df.iloc[0]
-            if not (abs(first_row['target_center_nm'] - target_wl) < 1e-3 and
-                    abs(first_row['target_bw_nm'] - target_bw) < 1e-3 and
-                    abs(first_row['w_rej'] - w_rej) < 1e-3 and
-                    abs(first_row['w_pass'] - w_pass) < 1e-3 and
-                    abs(first_row['w_trans'] - w_trans) < 1e-3):
-                continue
-
-            # É o nosso experimento! Vamos achar a última geração válida.
-            gen_counts = df['generation'].value_counts()
-            
-            # Filtra apenas as gerações que tem tamanho == population_size
-            valid_gens = [gen for gen, count in gen_counts.items() if count == pop_size]
-            
-            if not valid_gens:
-                return 0, None, None # Nenhuma geração completou, começa do zero.
-                
-            last_valid_gen = max(valid_gens)
-            
-            # Extrai os cromossomos dessa última geração
-            df_last_gen = df[df['generation'] == last_valid_gen]
-            rescued_pop = []
-            
-            for _, row in df_last_gen.iterrows():
-                chrom = {
-                    'Lambda': float(row['Lambda']),
-                    'DC': float(row['DC']),
-                    'w': float(row['w']),
-                    'w_c': float(row['w_c']),
-                    'N': int(row['N'])
-                }
-                rescued_pop.append(chrom)
-                
-            return int(last_valid_gen), rescued_pop, file
-
-        except Exception as e:
-            continue
-
-    return 0, None, None
-
 def run_sweep():
     print("--- SUPERVISOR: Iniciando varredura ---")
     start_time = datetime.datetime.now()
@@ -157,14 +76,30 @@ def run_sweep():
     wavelength_sweep_nm = np.linspace(WAVELENGTH_START_NM, WAVELENGTH_STOP_NM, WAVELENGTH_STEPS)
     total_planned_experiments = len(wavelength_sweep_nm)
     
-    state = load_state_from_file(SWEEP_STATE_FILE)
+# Agrupa os parâmetros para garantir a integridade absoluta do estado
+    sweep_params = {
+        "strategy": SWEEP_FITNESS_STRATEGY,
+        "start_nm": WAVELENGTH_START_NM,
+        "stop_nm": WAVELENGTH_STOP_NM,
+        "steps": WAVELENGTH_STEPS,
+        "bandwidths": BANDWIDTH_SWEEP_NM,
+        "threshold": FITNESS_THRESHOLD,
+        # Salva a geometria para detectar mudanças nos ranges
+        "ranges": DEFAULT_CONFIG["ga_ranges"],
+        # Salva os pesos para detectar mudanças nas prioridades da otimização
+        "weights": DEFAULT_CONFIG["fitness_params"]["weights"]
+    }
+    
+    # Delegamos a gestão de estado inicial para o recover.py
+    state = load_or_create_sweep_state(SWEEP_STATE_FILE, DEFAULT_CONFIG, sweep_params)
     
     if state["start_index"] == total_planned_experiments:
-        print("--- REINICIANDO para uma nova varredura. ---")
-        state = {"start_index": 0, "all_experiment_results": []}
-        save_state(SWEEP_STATE_FILE, state)
+        print("--- Varredura anterior já estava 100% concluída. REINICIANDO para uma nova. ---")
+        state["start_index"] = 0
+        state["all_experiment_results"] = []
+        save_sweep_state(SWEEP_STATE_FILE, state)
     elif state["start_index"] > 0:
-        print(f"--- Estado anterior encontrado. Retomando da etapa {state['start_index']} ---")
+        print(f"--- Estado anterior encontrado e válido. Retomando da etapa {state['start_index']} ---")
     
     all_results = state["all_experiment_results"]
     start_index = state["start_index"]
@@ -188,23 +123,30 @@ def run_sweep():
                 current_config['fitness_params']['center_wl_nm'] = target_wl_nm
                 current_config['fitness_params']['bandwidth_nm'] = bw_nm
                 
-                # --- LÓGICA DE CHECKPOINT AQUI ---
-                resumed_gen, resumed_pop, original_csv = check_for_checkpoint(target_wl_nm, bw_nm, current_config)
+                resumed_gen, resumed_pop, original_csv, past_best_fitness = check_for_checkpoint(current_config)
                 
-                if resumed_gen > 0:
-                    print(f"  [CHECKPOINT ENCONTRADO] Retomando da Geração {resumed_gen} de um experimento anterior.")
-                    current_config['checkpoint'] = {
-                        'start_generation': resumed_gen,
-                        'population': resumed_pop,
-                        'original_csv_path': original_csv
-                    }
+                is_completed = (resumed_gen == current_config['ga_params']['num_generations'])
+                is_successful = (past_best_fitness >= FITNESS_THRESHOLD)
                 
-                try:
-                    best_fitness, csv_path = run_optimization(current_config)
-                except Exception as e:
-                    print(f"!!! Erro fatal em 'run_optimization': {e}")
-                    best_fitness = -np.inf
-                    csv_path = None
+                if resumed_gen > 0 and (is_completed or is_successful):
+                    print(f"  [RESGATE RÁPIDO] Experimento concluído (Gen {resumed_gen}, Fit {past_best_fitness:.4f}). Pulando Lumerical.")
+                    best_fitness = past_best_fitness
+                    csv_path = original_csv
+                else:
+                    if resumed_gen > 0:
+                        print(f"  [CHECKPOINT ENCONTRADO] Retomando da Geração {resumed_gen} de um experimento anterior.")
+                        current_config['checkpoint'] = {
+                            'start_generation': resumed_gen,
+                            'population': resumed_pop,
+                            'original_csv_path': original_csv
+                        }
+                    
+                    try:
+                        best_fitness, csv_path = run_optimization(current_config)
+                    except Exception as e:
+                        print(f"!!! Erro fatal em 'run_optimization': {e}")
+                        best_fitness = -np.inf
+                        csv_path = None
 
                 if best_fitness > best_fitness_for_this_wl:
                     best_fitness_for_this_wl = best_fitness
@@ -232,9 +174,11 @@ def run_sweep():
                 }
             
             all_results.append(best_config_for_this_wl)
+            
+            # --- SALVA O ESTADO A CADA PASSO ---
             state["start_index"] = i + 1
             state["all_experiment_results"] = all_results
-            save_state(SWEEP_STATE_FILE, state)
+            save_sweep_state(SWEEP_STATE_FILE, state)
 
     except KeyboardInterrupt:
         print("\n--- Varredura interrompida pelo usuário. ---")
