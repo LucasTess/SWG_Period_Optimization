@@ -2,6 +2,7 @@ import os
 import glob
 import json
 import re
+import shutil  # <-- Necessário para deletar diretórios inteiros
 
 def cleanup_failed_experiments():
     # --- Mapeamento de Caminhos Inteligente ---
@@ -26,8 +27,8 @@ def cleanup_failed_experiments():
     print(" INICIANDO FAXINA DE RESULTADOS (FITNESS < 0.75)")
     print("==================================================================\n")
 
-    # O restante do script continua exatamente igual...
-    json_files = glob.glob(os.path.join(sim_results_dir, "*.json"))
+    # [MODIFICAÇÃO] Busca recursiva para encontrar os JSONs dentro das subpastas
+    json_files = glob.glob(os.path.join(sim_results_dir, "**", "*.json"), recursive=True)
     timestamps_to_delete = set()
 
     print("[1/3] Analisando o fitness dentro dos arquivos JSON...")
@@ -56,36 +57,40 @@ def cleanup_failed_experiments():
 
     print(f"=> Encontrados {len(timestamps_to_delete)} experimentos falhos.")
     
-    print("\n[2/3] Mapeando arquivos satélites associados a esses timestamps...")
-    all_files = glob.glob(os.path.join(sim_results_dir, "*"))
-    files_to_delete = []
+    print("\n[2/3] Mapeando arquivos satélites e pastas associadas a esses timestamps...")
+    targets_to_delete = []
 
-    for file in all_files:
-        filename = os.path.basename(file)
-        if "sweep_summary" in filename:
-            continue
+    # [MODIFICAÇÃO] Vai direto nos alvos específicos (A pasta do teste e o CSV bruto na raiz)
+    for ts in timestamps_to_delete:
+        # 1. Procura a subpasta
+        folder_path = os.path.join(sim_results_dir, f"results_{ts}")
+        if os.path.exists(folder_path):
+            targets_to_delete.append(folder_path)
             
-        for ts in timestamps_to_delete:
-            if ts in filename:
-                files_to_delete.append(file)
-                break 
+        # 2. Procura o CSV bruto na raiz
+        csv_pattern = os.path.join(sim_results_dir, f"*{ts}_full_data.csv")
+        csv_matches = glob.glob(csv_pattern)
+        targets_to_delete.extend(csv_matches)
 
-    print(f"=> Um total de {len(files_to_delete)} arquivos lixo (JSONs, CSVs, PNGs, etc.) serão apagados.")
+    print(f"=> Um total de {len(targets_to_delete)} itens (pastas e arquivos CSV) serão apagados.")
 
     print("\n[3/3] Execução de Limpeza")
-    confirm = input("Tem certeza que deseja DELETAR PERMANENTEMENTE esses arquivos? (s/n): ")
+    confirm = input("Tem certeza que deseja DELETAR PERMANENTEMENTE esses arquivos e pastas? (s/n): ")
     
     if confirm.lower().strip() == 's':
         deleted_count = 0
-        for file in files_to_delete:
+        for target in targets_to_delete:
             try:
-                os.remove(file)
+                if os.path.isdir(target):
+                    shutil.rmtree(target) # Apaga a pasta com tudo dentro
+                else:
+                    os.remove(target)     # Apaga o arquivo solto (CSV)
                 deleted_count += 1
             except Exception as e:
-                print(f"  -> Erro ao deletar {os.path.basename(file)}: {e}")
+                print(f"  -> Erro ao deletar {os.path.basename(target)}: {e}")
         
         print("\n==================================================================")
-        print(f" SUCESSO! Faxina concluída. {deleted_count} arquivos foram removidos.")
+        print(f" SUCESSO! Faxina concluída. {deleted_count} itens foram removidos.")
         print("==================================================================\n")
     else:
         print("\n==================================================================")
