@@ -24,7 +24,7 @@ DEFAULT_CONFIG = {
         "simulation_results_directory_name": "simulation_results"
     },
     "ga_params": {
-        "population_size": 10,
+        "population_size": 60,
         "mutation_rate": 0.2,
         "num_generations": 300,
         "enable_convergence_check": True,
