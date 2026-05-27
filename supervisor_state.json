@@ -1,35 +1,41 @@
 {
-    "start_index": 2,
-    "all_experiment_results": [
-        {
-            "target_wavelength_nm": 1450.0,
-            "attempted_bandwidth_nm": 10,
-            "best_fitness_achieved": 0.8105537217308515,
-            "results_csv_path": "C:\\Users\\User05\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1450.0nm_10nm_20260515_063215_full_data.csv",
-            "status": "Success"
+    "optimizer_type": "WOA",
+    "sweep_params": {
+        "strategy": "reflection_band",
+        "start_nm": 1450,
+        "stop_nm": 1550,
+        "steps": 11,
+        "bandwidths": [
+            8,
+            10,
+            12
+        ],
+        "threshold": 0.8,
+        "ranges": {
+            "Lambda_range": [
+                2e-07,
+                4e-07
+            ],
+            "DC_range": [
+                0.1,
+                0.9
+            ],
+            "w_range": [
+                4e-07,
+                6e-07
+            ],
+            "w_c_range_max_ratio": 0.8,
+            "N_range": [
+                2,
+                500
+            ]
         },
-        {
-            "target_wavelength_nm": 1460.0,
-            "attempted_bandwidth_nm": 8,
-            "best_fitness_achieved": 0.9390502753446407,
-            "results_csv_path": "C:\\Users\\User05\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1460.0nm_8nm_20260519_114959_full_data.csv",
-            "status": "Success"
+        "weights": {
+            "rejection": 0.2,
+            "passband": 0.6,
+            "transition": 0.2
         }
-    ],
-    "all_results": [
-        {
-            "target_wavelength_nm": 1450.0,
-            "attempted_bandwidth_nm": 10,
-            "best_fitness_achieved": 0.8105537217308515,
-            "results_csv_path": "C:\\Users\\User05\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1450.0nm_10nm_20260515_063215_full_data.csv",
-            "status": "Success"
-        },
-        {
-            "target_wavelength_nm": 1460.0,
-            "attempted_bandwidth_nm": 8,
-            "best_fitness_achieved": 0.9390502753446407,
-            "results_csv_path": "C:\\Users\\User05\\Documents\\SWG_Period_Optimization\\simulation_results\\reflection_band_1460.0nm_8nm_20260519_114959_full_data.csv",
-            "status": "Success"
-        }
-    ]
+    },
+    "start_index": 0,
+    "all_experiment_results": []
 }

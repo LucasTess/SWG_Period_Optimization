@@ -2,20 +2,19 @@ import os
 import glob
 import json
 import re
+import shutil 
+import time  # <-- Importado para lidar com bloqueios do Windows
 
 def cleanup_failed_experiments():
-    # --- Mapeamento de Caminhos Inteligente ---
     current_dir = os.path.dirname(os.path.abspath(__file__))
     folder_name = os.path.basename(current_dir)
     
-    # Se o script já está dentro de simulation_results, a pasta alvo é a atual
     if folder_name == "simulation_results":
         sim_results_dir = current_dir
     elif folder_name == "compilation_exports":
         root_dir = os.path.dirname(current_dir)
         sim_results_dir = os.path.join(root_dir, "simulation_results")
     else:
-        # Se estiver na raiz do projeto
         sim_results_dir = os.path.join(current_dir, "simulation_results")
     
     if not os.path.exists(sim_results_dir):
@@ -26,8 +25,7 @@ def cleanup_failed_experiments():
     print(" INICIANDO FAXINA DE RESULTADOS (FITNESS < 0.75)")
     print("==================================================================\n")
 
-    # O restante do script continua exatamente igual...
-    json_files = glob.glob(os.path.join(sim_results_dir, "*.json"))
+    json_files = glob.glob(os.path.join(sim_results_dir, "**", "*.json"), recursive=True)
     timestamps_to_delete = set()
 
     print("[1/3] Analisando o fitness dentro dos arquivos JSON...")
@@ -56,36 +54,52 @@ def cleanup_failed_experiments():
 
     print(f"=> Encontrados {len(timestamps_to_delete)} experimentos falhos.")
     
-    print("\n[2/3] Mapeando arquivos satélites associados a esses timestamps...")
-    all_files = glob.glob(os.path.join(sim_results_dir, "*"))
-    files_to_delete = []
+    print("\n[2/3] Mapeando arquivos satélites e pastas associadas a esses timestamps...")
+    targets_to_delete = []
 
-    for file in all_files:
-        filename = os.path.basename(file)
-        if "sweep_summary" in filename:
-            continue
+    for ts in timestamps_to_delete:
+        # 1. Procura a subpasta
+        folder_path = os.path.join(sim_results_dir, f"results_{ts}")
+        if os.path.exists(folder_path):
+            targets_to_delete.append(folder_path)
             
-        for ts in timestamps_to_delete:
-            if ts in filename:
-                files_to_delete.append(file)
-                break 
+        # 2. Procura o CSV bruto na raiz (Pega tanto do WOA quanto do GA)
+        csv_pattern = os.path.join(sim_results_dir, f"*{ts}_full_data.csv")
+        csv_matches = glob.glob(csv_pattern)
+        targets_to_delete.extend(csv_matches)
 
-    print(f"=> Um total de {len(files_to_delete)} arquivos lixo (JSONs, CSVs, PNGs, etc.) serão apagados.")
+    print(f"=> Um total de {len(targets_to_delete)} itens (pastas e arquivos CSV) serão apagados.")
 
     print("\n[3/3] Execução de Limpeza")
-    confirm = input("Tem certeza que deseja DELETAR PERMANENTEMENTE esses arquivos? (s/n): ")
+    confirm = input("Tem certeza que deseja DELETAR PERMANENTEMENTE esses arquivos e pastas? (s/n): ")
     
     if confirm.lower().strip() == 's':
         deleted_count = 0
-        for file in files_to_delete:
-            try:
-                os.remove(file)
-                deleted_count += 1
-            except Exception as e:
-                print(f"  -> Erro ao deletar {os.path.basename(file)}: {e}")
+        for target in targets_to_delete:
+            if os.path.isdir(target):
+                # Estratégia agressiva para pastas no Windows
+                shutil.rmtree(target, ignore_errors=True)
+                time.sleep(0.1)  # Dá 100ms pro Windows liberar o processo
+                
+                # Se a pasta ainda existir (sobreviveu ao rmtree), forçamos a exclusão
+                if os.path.exists(target):
+                    try:
+                        os.rmdir(target)
+                        deleted_count += 1
+                    except OSError:
+                        print(f"  -> [AVISO] A pasta '{os.path.basename(target)}' foi esvaziada, mas o Windows/VS Code a bloqueou. Feche-a no explorador.")
+                else:
+                    deleted_count += 1
+            else:
+                # Exclusão normal de arquivos
+                try:
+                    os.remove(target)
+                    deleted_count += 1
+                except Exception as e:
+                    print(f"  -> Erro ao deletar arquivo {os.path.basename(target)}: {e}")
         
         print("\n==================================================================")
-        print(f" SUCESSO! Faxina concluída. {deleted_count} arquivos foram removidos.")
+        print(f" SUCESSO! Faxina concluída. {deleted_count} itens foram removidos.")
         print("==================================================================\n")
     else:
         print("\n==================================================================")
