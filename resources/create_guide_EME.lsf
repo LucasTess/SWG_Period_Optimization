@@ -1,15 +1,7 @@
-# Este script AGORA assume que o grupo "Guia Metamaterial" e suas propriedades
-# já foram criados e definidos pelo Python.
-
-# 1. Lê os parâmetros do grupo existente
-height = getnamed("Guia Metamaterial", "height");
-w = getnamed("Guia Metamaterial", "w");
-w_c = getnamed("Guia Metamaterial", "w_c");
-Lambda = getnamed("Guia Metamaterial", "Lambda");
-DC = getnamed("Guia Metamaterial", "DC");
-material = getnamed("Guia Metamaterial", "material");
-
-# 2. Constrói a geometria com base nesses parâmetros
+# 1. Os parâmetros Lambda, DC, w, w_c e N já foram injetados pelo Python no Workspace!
+# Vamos apenas definir as constantes caso não existam:
+if (exist("height") == 0) { height = 0.22e-6; }
+if (exist("material") == 0) { material = "Si (Silicon) - Palik"; }
 
 # Cria Substrato inferior
 addrect;

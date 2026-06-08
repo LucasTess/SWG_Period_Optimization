@@ -9,25 +9,19 @@ import traceback
 import copy 
 import re
 
+# Embora o main.py já não abra o modo diretamente, 
+# mantemos o path para garantir que as dependências resolvem bem.
 _lumapi_module_path = "C:\\Program Files\\Lumerical\\v241\\api\\python"
-
 if _lumapi_module_path not in sys.path:
     sys.path.append(_lumapi_module_path)
-
-import lumapi
 
 from utils.genetic import GeneticOptimizer
 from utils.woa import WhaleOptimizer
 from utils.experiment_recorder import record_experiment_results
 from utils.lumerical_workflow import simulate_generation_lumerical
-from utils.fitness_functions import (
-    DeltaAmpStrategy, BandpassStrategy, LowpassStrategy, HighpassStrategy,
-    ReflectionBandStrategy
-)
+from utils.fitness_functions import ReflectionBandStrategy
 from utils.file_handler import clean_simulation_directory
 from utils.analysis import run_full_analysis, analyze_peak_properties
-
-
 
 def run_optimization(config: dict):
     fp = config['file_paths']
@@ -70,7 +64,6 @@ def run_optimization(config: dict):
     
     c = 299792458
     FITNESS_STRATEGY_NAME = fit_p['strategy_name']
-    CUTOFF_WAVELENGTH_NM = fit_p['cutoff_wl_nm']
     CENTER_WAVELENGTH_NM = fit_p['center_wl_nm']
     BANDWIDTH_NM = fit_p['bandwidth_nm']
     TRANSITION_BANDWIDTH_NM = fit_p['transition_bw_nm']
@@ -80,7 +73,6 @@ def run_optimization(config: dict):
     WEIGHT_PASSBAND = w['passband']
     WEIGHT_TRANSITION = w['transition']
 
-    f_cutoff_hz = c / (CUTOFF_WAVELENGTH_NM * 1e-9)
     w_center_m = CENTER_WAVELENGTH_NM * 1e-9
     w_bw_m = BANDWIDTH_NM * 1e-9
     f_center_hz = c / w_center_m
@@ -92,40 +84,42 @@ def run_optimization(config: dict):
     f_trans_edge_hz = c / (w_center_m - (w_trans_bw_m / 2))
     transition_bandwidth_hz = abs(f_trans_edge_hz - f_center_hz) * 2
     
-
-# --- Identifica o Otimizador Desejado ---
+    # --- Identifica o Otimizador Desejado ---
     opt_type = config.get('optimizer_type', 'GA')
 
     # Gera o nome do experimento (Nomenclatura Limpa)
     experiment_start_time = datetime.datetime.now()
     if checkpoint:
         full_data_csv_path = original_csv_path
-        # Resgata o prefixo exato do arquivo antigo
         experiment_prefix = os.path.basename(original_csv_path).replace('_full_data.csv', '')
     else:
         timestamp_str = experiment_start_time.strftime('%Y%m%d_%H%M%S')
-        # Padrão: 1450.0nm_8nm_20260525_113110
         experiment_prefix = f"{CENTER_WAVELENGTH_NM}nm_{BANDWIDTH_NM}nm_{timestamp_str}"
         full_data_csv_path = os.path.join(_simulation_results_directory, f"{experiment_prefix}_full_data.csv")
     
     print("--------------------------------------------------------------------------")
-    print(f"Iniciando Otimização: {experiment_prefix} [{opt_type}]")
+    print(f"A Iniciar Otimização: {experiment_prefix} [{opt_type}]")
     print(f"--> Alvo Central: {CENTER_WAVELENGTH_NM} nm")
     print("--------------------------------------------------------------------------")
+    
     if FITNESS_STRATEGY_NAME == "reflection_band":
-        fitness_calculator = ReflectionBandStrategy(f_center=f_center_hz, bandwidth=bandwidth_hz, transition_bandwidth=transition_bandwidth_hz, w_rejection=WEIGHT_REJECTION, w_passband=WEIGHT_PASSBAND, w_transition=WEIGHT_TRANSITION)
+        fitness_calculator = ReflectionBandStrategy(
+            f_center=f_center_hz, bandwidth=bandwidth_hz, 
+            transition_bandwidth=transition_bandwidth_hz, 
+            w_rejection=WEIGHT_REJECTION, w_passband=WEIGHT_PASSBAND, 
+            w_transition=WEIGHT_TRANSITION
+        )
     else:
         raise ValueError("Estratégia inválida.")
 
     shutil.copy(_original_lms_path, _temp_lms_base_path)
 
-# --- INSTANCIAÇÃO DO OTIMIZADOR (FACTORY) ---
+    # --- INSTANCIAÇÃO DO OTIMIZADOR (FACTORY) ---
     if opt_type == 'WOA':
         optimizer = WhaleOptimizer(
             population_size, mutation_rate, num_generations,
             ga_r['Lambda_range'], ga_r['DC_range'], ga_r['w_range'], w_c_range, ga_r['N_range']
         )
-        # O WOA precisa saber a geração atual para calcular o cerco da presa (decaimento de 'a')
         if checkpoint:
             optimizer.current_generation = resume_gen
     else:
@@ -134,61 +128,58 @@ def run_optimization(config: dict):
             ga_r['Lambda_range'], ga_r['DC_range'], ga_r['w_range'], w_c_range, ga_r['N_range']
         )
     
-# --- INJEÇÃO DA POPULAÇÃO ---
+    # --- INJEÇÃO DA POPULAÇÃO ---
     if checkpoint:
         optimizer.population = rescued_pop
     else:
         optimizer.initialize_population()
         
-    # [CORREÇÃO] Declara a variável antes do loop começar!
     current_population = optimizer.population
-    # Se for um resgate, o generations_processed começa do valor retomado para que a escrita no CSV não volte para o número 1
+
     generations_processed = resume_gen
-    
-    # Se for resgate, all_individuals deve ser carregado para manter o histórico dos gráficos!
     all_individuals_data = []
+    
     if checkpoint:
         try:
             df_old = pd.read_csv(original_csv_path)
             all_individuals_data = df_old.to_dict('records')
-            # Reconstrói a melhor aptidão
-            best_fitness_so_far = df_old['Fitness'].max()
         except Exception:
-            best_fitness_so_far = -float('inf')
-    else:
-        best_fitness_so_far = -float('inf')
-        
+            pass
+            
+    best_fitness_so_far = -float('inf')
     generations_without_improvement = 0
-    mode = None 
 
     try:
-        mode = lumapi.MODE(hide=run_s['lumerical_hide_ui'])
-        mode.load(_original_lms_path)
-
-        # --- LOOP ADAPTATIVO (Começa do resume_gen) ---
+        # --- LOOP ADAPTATIVO ---
         for gen_num in range(resume_gen, num_generations):
             generations_processed += 1
-            print(f"\n--- Processando Geração {gen_num + 1}/{num_generations} ---")
+            print(f"\n--- A Processar Geração {gen_num + 1}/{num_generations} ---")
             
+            # [MODIFICADO] A chamada agora é feita sem o parâmetro "mode" 
+            # e com o parâmetro hide_ui no final
+            # Chama a função nativa hibrida sem scripts LSF externos
             all_S_matrices_for_gen, frequencies = simulate_generation_lumerical(
-                mode, current_population, _temp_lms_base_path,
-                _geometry_lsf_script_path, _simulation_lsf_script_path,
-                _temp_directory
+                current_population, w_center_m, w_bw_m, _temp_lms_base_path,
+                _temp_directory, run_s['lumerical_hide_ui']
             )
             
             fitness_scores_for_gen = []
             if frequencies is None:
                 fitness_scores_for_gen = [-np.inf] * len(current_population)
             else:
+
                 for S_matrix in all_S_matrices_for_gen:
                     if S_matrix is None:
                         fitness_scores_for_gen.append(-np.inf)
                         continue
+                    
                     try:
                         fitness_score = fitness_calculator.calculate(S_matrix, frequencies)
                     except Exception as e:
+                        print(f"!!! Erro no fitness: {e}")
                         fitness_score = -np.inf
                     fitness_scores_for_gen.append(fitness_score)
+
 
             real_peak_wl_nm = 0.0
             real_bw_hz = 0.0
@@ -205,12 +196,14 @@ def run_optimization(config: dict):
             scores_for_this_generation = copy.deepcopy(fitness_scores_for_gen)
 
             try:
+                # Proteção contra falha total na população
+                if all(s == -np.inf for s in fitness_scores_for_gen):
+                    print("⚠️ Aviso: Nenhuma simulação válida nesta geração. Pulando evolução.")
+                    continue # Pula para a próxima geração sem evoluir baleias corrompidas
                 current_population = optimizer.evolve(scores_for_this_generation)
             except ValueError as e:
                 break
             
-            # Record_experiment_results agora deve usar mode='a' internamente se o arquivo já existir, 
-            # ou você pode usar o all_individuals_data completo que repovoamos acima.
             record_experiment_results(
                 output_directory=_simulation_results_directory,
                 full_data_csv_path=full_data_csv_path,
@@ -234,7 +227,7 @@ def run_optimization(config: dict):
                 weight_rej=WEIGHT_REJECTION,
                 weight_pass=WEIGHT_PASSBAND,
                 weight_trans=WEIGHT_TRANSITION,
-                optimizer_type=opt_type  # <--- NOVA LINHA AQUI
+                optimizer_type=opt_type
             )
             
             if all_individuals_data:
@@ -249,7 +242,7 @@ def run_optimization(config: dict):
                     generations_without_improvement += 1
 
                 if generations_without_improvement >= CONVERGENCE_PATIENCE:
-                    print(f"\n  [Convergência] 🛑 Otimização considerada convergente.")
+                    print(f"\n  [Convergência] 🛑 Otimização considerada convergente.")
                     break
 
         print("\n--- Otimização Concluída ---")
@@ -257,20 +250,16 @@ def run_optimization(config: dict):
             clean_simulation_directory(_temp_directory, file_extension=".lms")
             clean_simulation_directory(_temp_directory, file_extension=".log")
             if os.path.exists(_temp_lms_base_path):
-                os.remove(_temp_lms_base_path)
+                try:
+                    os.remove(_temp_lms_base_path)
+                except:
+                    pass
         
         return optimizer.best_fitness, full_data_csv_path
 
     except Exception as e:
         traceback.print_exc()
         return -np.inf, None
-        
-    finally:
-        if mode:
-            try:
-                mode.close()
-            except Exception as e:
-                pass
 
 if __name__ == "__main__":
     pass

@@ -1,124 +1,194 @@
-# utils/lumerical_workflow.py (MODIFICADO PARA EME e N variável)
-
-import lumapi
+# utils/lumerical_workflow.py
+import sys
 import os
 import shutil
 import numpy as np
+import time
+import concurrent.futures
+import gc
 
-# --- Constantes da Simulação ---
-# A altura é fixa por fabricação
-HEIGHT_CONST = 0.22e-6
-# Material do núcleo
-MATERIAL_CONST = "Si (Silicon) - Palik" 
-# REMOVIDO: N_PERIODS = 100 # N agora vem do cromossomo
+_lumapi_module_path = "C:\\Program Files\\Lumerical\\v241\\api\\python"
+if _lumapi_module_path not in sys.path:
+    sys.path.append(_lumapi_module_path)
 
-# --- Configurações do EME Sweep (Controladas pelo Python) ---
-WAVELENGTH_START = 1.4e-6
-WAVELENGTH_STOP = 1.6e-6
-WAVELENGTH_POINTS = 501
-def _create_and_run_eme(mode, chromosome, lms_path, construction_lsf_path, simulation_lsf_path):
-    """
-    Função auxiliar que usa a API do MODE, executa os scripts LSF
-    para construir/configurar o EME, executa o sweep e retorna a matriz S.
-    """
+import lumapi
+
+# ==============================================================================
+MAX_LUMERICAL_WORKERS = 10
+# ==============================================================================
+
+def worker_simulate_chunk(worker_id, chunk_indices, population, center_wl_m, bw_m,
+                          base_lms_path, temp_dir, hide_ui=True):
+    results = {}
+    mode = None
+    
+    worker_dir = os.path.join(temp_dir, f"worker_{worker_id}")
+    os.makedirs(worker_dir, exist_ok=True)
+    worker_dir_lum = worker_dir.replace('\\', '/')
+    
+    time.sleep(worker_id * 2.0) 
+    
+    max_retries = 2
+    for attempt in range(max_retries):
+        try:
+            mode = lumapi.MODE(hide=hide_ui)
+            break
+        except Exception as e:
+            wait_time = 5 + (attempt * 5)
+            print(f"  [Worker {worker_id}] RAM/Licença ocupada. Aguardando {wait_time}s... (Tentativa {attempt+1}/{max_retries})")
+            time.sleep(wait_time)
+            if attempt == max_retries - 1:
+                print(f"❌ [Worker {worker_id}] Falha definitiva ao obter licença: {e}")
+                return {idx: (None, None) for idx in chunk_indices}
+                
     try:
-        # 1. Carrega o arquivo base e limpa
-        mode.load(lms_path)
-        mode.switchtolayout()
-        # (NÃO limpa, pois o LSF construtor assume que o grupo já existe)
-        
-        # 2. PYTHON CRIA O GRUPO E DEFINE AS PROPRIEDADES
-        # Limpa simulações anteriores ANTES de criar o novo grupo
-        mode.deleteall() 
-        mode.addstructuregroup()
-        mode.set("name", "Guia Metamaterial")
-        
-        mode.adduserprop("Lambda", 2, chromosome['Lambda'])
-        mode.adduserprop("DC", 2, chromosome['DC'])
-        mode.adduserprop("w", 2, chromosome['w'])
-        mode.adduserprop("w_c", 2, chromosome['w_c'])
-        mode.adduserprop("N", 2, chromosome['N']) 
-        mode.adduserprop("height", 2, HEIGHT_CONST)
-        mode.adduserprop("material", 5, MATERIAL_CONST)
+        wl_start = center_wl_m - (bw_m * 2)
+        wl_stop = center_wl_m + (bw_m * 2)
 
-        # 3. Roda o script LSF de construção (create_guide_EME.lsf)
-        with open(construction_lsf_path, 'r') as f:
-            create_lsf_content = f.read()
-        mode.eval(create_lsf_content) # Este script NÃO deve ter 'deleteall'
-
-        # 4. Roda o script de setup do EME (run_simu_guide_EME.lsf)
-        with open(simulation_lsf_path, 'r') as f:
-            simulate_lsf_content = f.read()
-        mode.eval(simulate_lsf_content) # Este script define as portas e roda 'run'
-        
-        mode.save()
-
-        # 5. PYTHON CONTROLA O SWEEP E EXECUTA
-        mode.setemeanalysis("wavelength sweep", 1)
-        mode.setemeanalysis("start wavelength", WAVELENGTH_START)
-        mode.setemeanalysis("stop wavelength", WAVELENGTH_STOP)
-        mode.setemeanalysis("number of wavelength points", WAVELENGTH_POINTS)
-        
-        print(f"    - Executando emesweep para {os.path.basename(lms_path)}...")
-        mode.emesweep("wavelength sweep")
-        
-        # 6. PYTHON COLETA OS RESULTADOS
-        print(f"    - Coletando resultados...")
-        
-        # --- [CORREÇÃO 1 AQUI] ---
-        # O nome do resultado correto é "S_wavelength_sweep"
-        S_matrix_dataset = mode.getemesweep("S_wavelength_sweep")
-        
-        # --- [CORREÇÃO 2 AQUI] ---
-        # O resultado é um struct com 'wavelength' e 's11', 's12', etc.
-        wavelengths = S_matrix_dataset['wavelength'].flatten() 
-        # Converte comprimentos de onda (m) para frequências (Hz) para o fitness
-        c = 299792458.0 
-        frequencies = c / wavelengths
-        
-        num_freq = len(frequencies)
-        S_matrix_3D = np.zeros((2, 2, num_freq), dtype=np.complex128)
-        
-        S_matrix_3D[0, 0, :] = S_matrix_dataset['s11']
-        S_matrix_3D[0, 1, :] = S_matrix_dataset['s12']
-        S_matrix_3D[1, 0, :] = S_matrix_dataset['s21']
-        S_matrix_3D[1, 1, :] = S_matrix_dataset['s22']
-        # print("S21 Lum Workflow")
-        # print(S_matrix_3D[1, 0, :])
-        # Retorna a Matriz S e as FREQUÊNCIAS (que o fitness_functions.py espera)
-        return S_matrix_3D, frequencies
-
-    except Exception as e:
-        print(f"!!! Erro durante a modificação/execução de {os.path.basename(lms_path)}: {e}")
-        return None, None
-    
-def simulate_generation_lumerical(mode_session, current_population, lms_base_path,
-                                  geometry_lsf_path, 
-                                  simulation_lsf_path, temp_directory):
-    """
-    Executa UMA simulação EME para cada cromossomo na população.
-    """
-    all_S_matrices = []
-    frequencies = None
-    
-    for chrom_id, chromosome in enumerate(current_population):
-        print(f"\n--- Processando Indivíduo {chrom_id + 1}/{len(current_population)} ---")
-        
-        lms_main_path = os.path.join(temp_directory, f"chrom_{chrom_id+1}_eme.lms")
-
-        shutil.copy(lms_base_path, lms_main_path)
-
-        print(f"  - Modificando e executando {os.path.basename(lms_main_path)}...")
-        S_total, current_frequencies = _create_and_run_eme(
-            mode_session, 
-            chromosome, 
-            lms_main_path, 
-            geometry_lsf_path, 
-            simulation_lsf_path
-        )
-        
-        all_S_matrices.append(S_total)
-        if frequencies is None and current_frequencies is not None:
-            frequencies = current_frequencies
+        for i in chunk_indices:
+            chrom = population[i]
+            unique_lms = os.path.join(worker_dir, f"sim_ind_{i}.lms")
             
-    return all_S_matrices, frequencies
+            shutil.copy(base_lms_path, unique_lms)
+            
+            mode.load(unique_lms.replace('\\', '/'))
+            mode.eval(f"cd('{worker_dir_lum}');")
+            
+            lsf_code = f"""
+switchtolayout;
+selectall; delete;
+
+# Variaveis
+Lambda = {float(chrom['Lambda'])};
+DC = {float(chrom['DC'])};
+w = {float(chrom['w'])};
+w_c = {float(chrom['w_c'])};
+N = {int(chrom['N'])};
+height = 0.22e-6;
+mat_sub = "SiO2 (Glass) - Palik";
+mat_core = "Si (Silicon) - Palik";
+
+# Geometria
+addrect; set("name", "Sub_inf"); set("material", mat_sub);
+set("x", 0); set("x span", Lambda*8); set("y", 0); set("y span", w*3);
+set("z", -0.22e-6); set("z span", 0.22e-6);
+
+addrect; set("name", "Sub_sup"); set("material", mat_sub);
+set("x", 0); set("x span", Lambda*8); set("y", 0); set("y span", w*3);
+set("z", 0); set("z span", height*3); set("alpha", 0.4);
+
+addrect; set("name", "G_in"); set("material", mat_core);
+set("x min", -2*Lambda); set("x max", -Lambda/2); set("y", 0); set("y span", w);
+set("z", -0.11e-6 + height/2); set("z span", height);
+
+addrect; set("name", "S_per"); set("material", mat_core);
+set("x min", -Lambda/2); set("x max", -Lambda/2 + Lambda*DC); set("y", 0); set("y span", w);
+set("z", -0.11e-6 + height/2); set("z span", height);
+
+addrect; set("name", "S_core"); set("material", mat_core);
+set("x min", -Lambda/2 + Lambda*DC); set("x max", Lambda/2); set("y", 0); set("y span", w_c);
+set("z", -0.11e-6 + height/2); set("z span", height);
+
+addrect; set("name", "G_out"); set("material", mat_core);
+set("x min", Lambda/2); set("x max", Lambda*2); set("y", 0); set("y span", w);
+set("z", -0.11e-6 + height/2); set("z span", height);
+
+# Solver
+addeme;
+set("x min", -2*Lambda); set("y", 0); set("y span", w*1.5);
+set("z", 0); set("z span", height*3);
+select("EME");
+set("display cells", 1);
+set("number of cell groups", 4);
+set("group spans", [(2*Lambda)-Lambda/2; Lambda*DC; Lambda*(1-DC); 2*Lambda-Lambda/2]);
+set("cells", [1; 1; 1; 1]);
+set("number of periodic groups", 1);
+set("start cell group", [2]); set("end cell group", [3]); set("periods", N);
+
+run;
+
+# Sweep
+setemeanalysis("wavelength sweep", 1);
+setemeanalysis("start wavelength", {wl_start});
+setemeanalysis("stop wavelength", {wl_stop});
+setemeanalysis("number of wavelength points", 150);
+emesweep("wavelength sweep");
+"""
+            try:
+                mode.eval(lsf_code)
+                
+                S_matrix_dataset = mode.getemesweep("S_wavelength_sweep")
+                wavelengths = S_matrix_dataset['wavelength'].flatten() 
+                
+                c_const = 299792458.0 
+                freq = c_const / wavelengths
+                num_freq = len(freq)
+                
+                S_matrix_3D = np.zeros((2, 2, num_freq), dtype=np.complex128)
+                S_matrix_3D[0, 0, :] = S_matrix_dataset['s11'].flatten()
+                S_matrix_3D[0, 1, :] = S_matrix_dataset['s12'].flatten()
+                S_matrix_3D[1, 0, :] = S_matrix_dataset['s21'].flatten()
+                S_matrix_3D[1, 1, :] = S_matrix_dataset['s22'].flatten()
+                
+                results[i] = (S_matrix_3D, freq)
+                
+            except Exception as e:
+                results[i] = (None, None)
+                
+    finally:
+        if mode:
+            try: mode.close()
+            except: pass
+            del mode 
+        
+        gc.collect()
+
+        try:
+            for filename in os.listdir(worker_dir):
+                file_path = os.path.join(worker_dir, filename)
+                if os.path.isfile(file_path):
+                    os.unlink(file_path) 
+        except:
+            pass
+            
+    return results
+
+def simulate_generation_lumerical(population, center_wl_m, bw_m, base_lms_path, temp_dir, hide_ui=True):
+    pop_size = len(population)
+    all_S_matrices = [None] * pop_size
+    all_frequencies = None
+    
+    indices = list(range(pop_size))
+    chunks = [list(c) for c in np.array_split(indices, min(MAX_LUMERICAL_WORKERS, pop_size))]
+    
+    print(f"  -> Distribuindo {pop_size} indivíduos em {len(chunks)} sessões paralelas...")
+
+    # --- PROTEÇÃO NÍVEL SO: Limpeza Pré-Geração ---
+    # Se algum zumbi sobreviveu da geração passada, aniquila-o antes de alocar novas licenças.
+    try:
+        os.system("taskkill /F /IM mode.exe /T >nul 2>&1")
+    except:
+        pass
+
+    futures = []
+    with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_LUMERICAL_WORKERS) as executor:
+        for worker_id, chunk in enumerate(chunks):
+            if len(chunk) > 0:
+                futures.append(executor.submit(worker_simulate_chunk, worker_id, chunk, population, center_wl_m, bw_m, base_lms_path, temp_dir, hide_ui))
+                
+        for future in concurrent.futures.as_completed(futures):
+            chunk_results = future.result()
+            for idx, (S_mat, freq) in chunk_results.items():
+                all_S_matrices[idx] = S_mat
+                if freq is not None and all_frequencies is None:
+                    all_frequencies = freq 
+
+    # --- PROTEÇÃO NÍVEL SO: Limpeza Pós-Geração ---
+    # Assim que todos os trabalhadores entregarem as matrizes, liberta a RAM e as portas de rede.
+    try:
+        os.system("taskkill /F /IM mode.exe >nul 2>&1")
+        os.system("taskkill /F /IM eme-engine-msmpi.exe >nul 2>&1")
+    except:
+        pass
+
+    return all_S_matrices, all_frequencies

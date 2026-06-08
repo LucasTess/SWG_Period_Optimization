@@ -10,7 +10,7 @@
             10,
             12
         ],
-        "threshold": 0.8,
+        "threshold": 0.75,
         "ranges": {
             "Lambda_range": [
                 2e-07,

@@ -1,0 +1,91 @@
+# =========================================================================
+# SCRIPT DE TESTE STANDALONE PARA DEBUG NA GUI DO LUMERICAL
+# =========================================================================
+
+switchtolayout;
+selectall;
+delete;
+
+# 1. Variáveis Hardcoded (Valores reais de teste para o SWG)
+Lambda = 0.3e-6;
+DC = 0.5;
+w = 0.5e-6;
+w_c = 0.3e-6;
+N = 20;
+height = 0.22e-6;
+wl_start = 1440e-9;
+wl_stop = 1460e-9;
+
+mat_sub = "SiO2 (Glass) - Palik";
+mat_core = "Si (Silicon) - Palik";
+
+# 2. Substratos
+addrect; set("name", "Sub_inf"); set("material", mat_sub);
+set("x", 0); set("x span", Lambda*8); set("y", 0); set("y span", w*3);
+set("z", -0.22e-6); set("z span", 0.22e-6);
+
+addrect; set("name", "Sub_sup"); set("material", mat_sub);
+set("x", 0); set("x span", Lambda*8); set("y", 0); set("y span", w*3);
+set("z", 0); set("z span", height*3); set("alpha", 0.4);
+
+# 3. Geometria do Guia
+addrect; set("name", "G_in"); set("material", mat_core);
+set("x min", -2*Lambda); set("x max", -Lambda/2); set("y", 0); set("y span", w);
+set("z", -0.11e-6 + height/2); set("z span", height); set("alpha", 1);
+
+addrect; set("name", "S_per"); set("material", mat_core);
+set("x min", -Lambda/2); set("x max", -Lambda/2 + Lambda*DC); set("y", 0); set("y span", w);
+set("z", -0.11e-6 + height/2); set("z span", height);
+
+addrect; set("name", "S_core"); set("material", mat_core);
+set("x min", -Lambda/2 + Lambda*DC); set("x max", Lambda/2); set("y", 0); set("y span", w_c);
+set("z", -0.11e-6 + height/2); set("z span", height);
+
+addrect; set("name", "G_out"); set("material", mat_core);
+set("x min", Lambda/2); set("x max", Lambda*2); set("y", 0); set("y span", w);
+set("z", -0.11e-6 + height/2); set("z span", height); set("alpha", 1);
+
+# 4. Solver EME
+addeme;
+set("x min", -2*Lambda);
+set("y", 0); set("y span", w*1.5);
+set("z", 0); set("z span", height*3);
+
+select("EME");
+set("display cells", 1);
+set("number of cell groups", 4);
+
+span1 = (2*Lambda)-Lambda/2;
+span2 = Lambda*DC;
+span3 = Lambda*(1-DC);
+span4 = 2*Lambda-Lambda/2;
+set("group spans", [span1; span2; span3; span4]);
+set("cells", [1; 1; 1; 1]);
+set("subcell method", [0; 0; 0; 0]);
+
+set("number of periodic groups", 1);
+set("start cell group", [2]);
+set("end cell group", [3]);
+set("periods", N);
+
+# 5. Inicia o cálculo EME (Calcula os modos)
+run;
+
+# 6. O sweep EME
+setemeanalysis("wavelength sweep", 1);
+setemeanalysis("start wavelength", wl_start);
+setemeanalysis("stop wavelength", wl_stop);
+setemeanalysis("number of wavelength points", 150);
+
+# O sweep EME
+emesweep("wavelength sweep");
+
+# Coleta de Matrizes (Agora extraindo os componentes do dataset)
+S_dataset = getemesweep("S_wavelength_sweep");
+
+# Vamos extrair o componente S21, que é o padrão para transmissão (ou S11 para reflexão)
+# Ajuste para S11 ou S21 conforme a sua estratégia de fitness!
+S_matrix_total = S_dataset.s21; 
+frequencies = c / S_dataset.wavelength;
+
+?"Simulação Standalone Concluída com Sucesso!";
