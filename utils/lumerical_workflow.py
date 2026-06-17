@@ -14,6 +14,7 @@ if _lumapi_module_path not in sys.path:
 import lumapi
 
 # ==============================================================================
+# Se a máquina chorar, baixe isto para 6 ou 8.
 MAX_LUMERICAL_WORKERS = 10
 # ==============================================================================
 
@@ -164,9 +165,9 @@ def simulate_generation_lumerical(population, center_wl_m, bw_m, base_lms_path, 
     print(f"  -> Distribuindo {pop_size} indivíduos em {len(chunks)} sessões paralelas...")
 
     # --- PROTEÇÃO NÍVEL SO: Limpeza Pré-Geração ---
-    # Se algum zumbi sobreviveu da geração passada, aniquila-o antes de alocar novas licenças.
     try:
-        os.system("taskkill /F /IM mode.exe /T >nul 2>&1")
+        os.system("taskkill /F /IM mode.exe >nul 2>&1")
+        os.system("taskkill /F /IM eme-engine-msmpi.exe >nul 2>&1")
     except:
         pass
 
@@ -184,7 +185,6 @@ def simulate_generation_lumerical(population, center_wl_m, bw_m, base_lms_path, 
                     all_frequencies = freq 
 
     # --- PROTEÇÃO NÍVEL SO: Limpeza Pós-Geração ---
-    # Assim que todos os trabalhadores entregarem as matrizes, liberta a RAM e as portas de rede.
     try:
         os.system("taskkill /F /IM mode.exe >nul 2>&1")
         os.system("taskkill /F /IM eme-engine-msmpi.exe >nul 2>&1")

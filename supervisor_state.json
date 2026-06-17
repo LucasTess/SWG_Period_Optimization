@@ -36,6 +36,35 @@
             "transition": 0.2
         }
     },
-    "start_index": 0,
-    "all_experiment_results": []
+    "start_index": 4,
+    "all_experiment_results": [
+        {
+            "target_wavelength_nm": 1450.0,
+            "attempted_bandwidth_nm": 12,
+            "best_fitness_achieved": 0.7529463909479485,
+            "results_csv_path": "simulation_results\\1450.0nm_12nm_20260608_135053_full_data.csv",
+            "status": "Success"
+        },
+        {
+            "target_wavelength_nm": 1460.0,
+            "attempted_bandwidth_nm": 10,
+            "best_fitness_achieved": 0.7530135007748723,
+            "results_csv_path": "simulation_results\\1460.0nm_10nm_20260609_022249_full_data.csv",
+            "status": "Success"
+        },
+        {
+            "target_wavelength_nm": 1470.0,
+            "attempted_bandwidth_nm": 8,
+            "best_fitness_achieved": 0.7495948548879212,
+            "results_csv_path": "simulation_results\\1470.0nm_8nm_20260609_080911_full_data.csv",
+            "status": "Fail"
+        },
+        {
+            "target_wavelength_nm": 1480.0,
+            "attempted_bandwidth_nm": 8,
+            "best_fitness_achieved": 0.6011884697569888,
+            "results_csv_path": "C:\\Users\\User05\\Documents\\SWG_Period_Optimization\\simulation_results\\1480.0nm_8nm_20260611_044913_full_data.csv",
+            "status": "Fail"
+        }
+    ]
 }
