@@ -8,12 +8,10 @@ class WhaleOptimizer:
                  Lambda_range, DC_range, w_range, w_c_range, N_range):
         self.population_size = population_size
         self.generations = generations
-        # A taxa de mutação não é nativa do WOA clássico, mas a mantemos
-        # como atributo para manter a assinatura idêntica ao GeneticOptimizer
-        # e evitar erros no experiment_recorder.py
+        # Mantido por compatibilidade com a assinatura do supervisor/GA
         self.mutation_rate = mutation_rate 
         
-        self.current_generation = 0 # Crucial para o decaimento do vetor 'a' do WOA
+        self.current_generation = 0 
 
         self.param_ranges = {
             'Lambda': {'range': Lambda_range, 'type': 'float'},
@@ -71,11 +69,11 @@ class WhaleOptimizer:
         return score
 
     def evolve(self, current_generation_fitness):
-        """Atualiza a posição do cardume de baleias (Geração de novas geometrias)."""
+        """Atualiza a posição do cardume de baleias com Elitismo Estrito."""
         if len(current_generation_fitness) != len(self.population):
             raise ValueError("O número de resultados não corresponde à população.")
 
-        # 1. Avalia o cardume e encontra a melhor baleia (a que está mais perto da presa)
+        # 1. Avalia o cardume e encontra a melhor baleia global
         for i, individual in enumerate(self.population):
             individual_fitness = self.calculate_fitness(current_generation_fitness[i])
             individual['fitness'] = individual_fitness
@@ -92,8 +90,18 @@ class WhaleOptimizer:
 
         new_population = []
 
-        # 3. Atualiza a posição de cada baleia
+        # --- CORREÇÃO: ELITISMO ESTRITO ---
+        # Garante que a geometria perfeita seja repassada intacta para a próxima geração
+        if self.best_individual:
+            elite_whale = {k: self.best_individual[k] for k in self.param_ranges.keys()}
+            new_population.append(elite_whale)
+
+        # 3. Atualiza a posição do resto do cardume
         for i in range(self.population_size):
+            # Se já preenchemos a população (devido à baleia de elite), paramos o loop
+            if len(new_population) >= self.population_size:
+                break
+                
             current_whale = self.population[i]
             new_whale = {}
             
@@ -113,21 +121,18 @@ class WhaleOptimizer:
                     # Mecanismo de cerco à presa (Explotação)
                     for param in self.param_ranges.keys():
                         D = abs(C * self.best_individual[param] - current_whale[param])
-                        new_val = self.best_individual[param] - A * D
-                        new_whale[param] = new_val
+                        new_whale[param] = self.best_individual[param] - A * D
                 else:
                     # Busca global por uma nova presa (Exploração)
                     random_whale = random.choice(self.population)
                     for param in self.param_ranges.keys():
                         D = abs(C * random_whale[param] - current_whale[param])
-                        new_val = random_whale[param] - A * D
-                        new_whale[param] = new_val
+                        new_whale[param] = random_whale[param] - A * D
             else:
                 # Atualização em espiral ao redor da melhor presa (Explotação forte)
                 for param in self.param_ranges.keys():
                     D_prime = abs(self.best_individual[param] - current_whale[param])
-                    new_val = D_prime * math.exp(b * l) * math.cos(2.0 * math.pi * l) + self.best_individual[param]
-                    new_whale[param] = new_val
+                    new_whale[param] = D_prime * math.exp(b * l) * math.cos(2.0 * math.pi * l) + self.best_individual[param]
 
             # 4. Limita a nova posição aos limites físicos de fabricação
             for param in self.param_ranges.keys():
