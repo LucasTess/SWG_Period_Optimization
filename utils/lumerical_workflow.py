@@ -15,7 +15,7 @@ import lumapi
 
 # ==============================================================================
 # Se a máquina chorar, baixe isto para 6 ou 8.
-MAX_LUMERICAL_WORKERS = 10
+MAX_LUMERICAL_WORKERS = 20
 # ==============================================================================
 
 def worker_simulate_chunk(worker_id, chunk_indices, population, center_wl_m, bw_m,

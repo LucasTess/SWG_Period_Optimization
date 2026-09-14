@@ -46,8 +46,8 @@ DEFAULT_CONFIG = {
         "transition_bw_nm": 20,
         "weights": {
             "rejection": 0.20,
-            "passband": 0.60,
-            "transition": 0.20
+            "passband": 0.30,
+            "transition": 0.50
         }
     },
     "run_settings": {
